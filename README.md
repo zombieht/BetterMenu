@@ -6,14 +6,16 @@
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" />
 </p>
 
-BetterMenu 是一款功能强大的 macOS 右键菜单增强工具，让macOS的右键菜单像windows一样好用。
+BetterMenu 是一款功能强大的 macOS 右键菜单增强工具，让 macOS 的右键菜单像 Windows 一样高效好用。
+
+<!-- 可选：在此处插入预览图或演示 GIF 提升项目颜值 -->
+<!-- 
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/.../preview.png" alt="BetterMenu Preview" width="700px" />
+</p> 
+-->
 
 ---
-## 安装说明
-安装完成后遇到“无法打开，因为无法确认开发者身份”：
-- 常规方法：前往 系统设置 -> 隐私与安全性，滑动到最下方，找到安全性提示并点击 仍要打开 (Open Anyway)。
-- 快捷命令：直接在终端运行以下命令移除隔离属性：
-xattr -cr /Applications/BetterMenu.app
 
 ## ✨ 核心功能
 
@@ -30,6 +32,24 @@ xattr -cr /Applications/BetterMenu.app
 
 ---
 
+## 🚀 安装与启用
+
+### 1. 解决隔离属性问题
+下载安装包后，若遇到“无法打开，因为无法确认开发者身份”提示：
+* **常规方法**：前往 **系统设置** -> **隐私与安全性**，滑动到最下方，找到安全性提示并点击 **仍要打开 (Open Anyway)**。
+* **快捷命令**：直接在终端运行以下命令移除隔离属性：
+  ```bash
+  xattr -cr /Applications/BetterMenu.app
+  ```
+
+### 2. 启用 Finder 扩展（关键步骤）
+由于 macOS 的安全策略，您需要手动为本软件授予 Finder 扩展权限，右键菜单方可生效：
+1. 打开 **系统设置** (System Settings)。
+2. 导航至 **隐私与安全性** (Privacy & Security) -> **扩展** (Extensions) -> **Finder 扩展** (Finder Extensions)。
+3. 勾选启用 **BetterMenu**。
+
+---
+
 ## 📦 系统要求
 
 - **操作系统**：macOS 15.0 或更高版本
@@ -38,7 +58,7 @@ xattr -cr /Applications/BetterMenu.app
 
 ---
 
-## 🚀 构建与运行
+## 🛠 本地开发与构建
 
 在本地克隆代码后，可通过项目内提供的脚本进行便捷的构建与管理。
 
@@ -60,53 +80,12 @@ xattr -cr /Applications/BetterMenu.app
 ./script/package.sh
 ```
 
-
 ---
 
-## 🛠 开发与架构规范
+## 📖 开发者架构文档
 
-为了保持项目的可维护性，开发时请遵循以下规范：
-
-### 项目结构
-
-```text
-BetterMenu/
-  AppDelegate.swift              # 主应用生命周期、窗口和 URL Scheme 路由
-  BetterMenuSettingsModel.swift  # 设置页 UI 状态绑定与业务分发（已瘦身）
-  BetterMenuSettingsView.swift   # SwiftUI 设置界面容器与侧边栏导航
-  BetterMenuGeneralSettingsViews.swift    # 通用设置与右键快捷操作页面
-  BetterMenuFileTypeSettingsViews.swift   # 新建文件类型、后缀标签与菜单预览
-  BetterMenuPermissionAboutViews.swift    # 权限、Finder 重启与关于页面
-  BetterMenuSettingsComponents.swift      # 设置页共享 UI 组件与流式布局
-  BetterMenuShared.swift         # 共享核心：统一 FileDefinition、全局 constants 与公共映射函数
-  ExternalAppLauncher.swift      # 终端、VS Code 等外部应用一键拉起服务
-  TerminalApp.swift              # 可选终端应用定义列表
-  SystemCommand.swift            # 底层命令行调用 Process 进程运行封装
-  IconCacheManager.swift         # 专职后台图标渲染、预热与序列化磁盘缓存服务
-
-BetterMenuFinderSync/
-  FinderSync.swift               # Finder Sync 扩展入口、上下文交互与菜单组装（极简 Controller）
-  SettingsMonitor.swift          # 共享偏好 plist 文件的加载、只读配置快照维护与 DispatchSource 监听
-  MenuIconManager.swift          # 磁盘缓存图标加载、SF Symbol 深浅色重绘与内存渲染二级缓存
-  FileCreator.swift              # 物理文件落盘、防文件名冲突算法计算与可执行权限设置
-  Resources/Templates/           # Word/Excel/PPTX 内置空白二进制模板文件
-```
-
-### 共享配置机制
-
-主 App 与 FinderSync 扩展运行在不同的进程中，二者通过用户主目录下的 plist 文件共享偏好配置：
-- 偏好设置路径：`~/Library/Application Support/BetterMenu/settings.plist`
-- 图标缓存路径：`~/Library/Caches/BetterMenu/icon_cache.plist`
-
-共享数据模型 `FileDefinition`、`FinderAction` 和键名统一在 `BetterMenuShared.swift` 中管理。新增需要两个 target 同时读取的数据定义时，必须直接归入共享层。
-
-### 结构维护规范
-- **主应用入口保持轻量**：`AppDelegate` 仅处理生命周期分发、AppKit 激活策略以及 URL Scheme 路由。
-- **ViewModel 高度内聚**：`BetterMenuSettingsModel` 只做数据和 UI 绑定，底层任务（如图标预热、System 进程命令）一律剥离成独立业务服务（如 `IconCacheManager`，`SystemCommand`）。
-- **FinderSync 扩展轻量化**：`FinderSync` 类仅扮演控制器角色。偏好读取与目录监听由 `SettingsMonitor` 托管，图标解析与渲染由 `MenuIconManager` 托管，文件生成由 `FileCreator` 托管。
-- **Swift 6 Concurrency 并发安全**：编写异步或跨 Target 通信的工具类时，必须按照 Swift 6 安全规范进行严格类型隔离，或使用锁机制辅以 `nonisolated(unsafe)` 消除编译警告。
-- **Xcode 项目同步**：新增 Swift 源文件后，必须同步注册在 `BetterMenu.xcodeproj/project.pbxproj` 对应的 target 编译阶段。
-- **文档维护**：更改项目行为、扩展逻辑或业务边界时，必须同步修改本文档。
+如果您打算贡献代码或想深入了解 BetterMenu 的内部机制，请参阅：
+👉 [BetterMenu 开发与架构指南 (DEVELOPMENT.md)](./DEVELOPMENT.md)
 
 ---
 
@@ -115,3 +94,7 @@ BetterMenuFinderSync/
 本项目在设计与开发过程中借鉴了以下优秀开源项目，在此表示衷心的感谢：
 
 - [QuickDoc](https://github.com/SkyImplied/QuickDoc)：为本项目提供了菜单构建与功能设计上的灵感与借鉴。
+
+## 📄 开源许可证
+
+本项目基于 [MIT License](https://opensource.org/licenses/MIT) 许可协议开源。
