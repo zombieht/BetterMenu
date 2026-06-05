@@ -128,11 +128,20 @@ struct AboutPage: View {
 
           Spacer()
 
-          if let projectUrl {
-            Link(destination: projectUrl) {
-              Label("开源主页", systemImage: "arrow.up.right")
+          HStack(spacing: 12) {
+            Button {
+              AppDelegate.shared?.checkForUpdates()
+            } label: {
+              Label("检查更新", systemImage: "arrow.down.circle")
             }
-            .glassButtonStyle(prominent: true)
+            .glassButtonStyle()
+
+            if let projectUrl {
+              Link(destination: projectUrl) {
+                Label("开源主页", systemImage: "arrow.up.right")
+              }
+              .glassButtonStyle(prominent: true)
+            }
           }
         }
       }

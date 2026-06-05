@@ -1,6 +1,7 @@
 import Cocoa
 import SwiftUI
 import os
+import Sparkle
 
 /// 状态栏菜单的 SwiftUI 视图定义
 struct BetterMenuBarView: View {
@@ -105,6 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   var window: NSWindow?
   private var initialWindowWorkItem: DispatchWorkItem?
   private var shouldSuppressInitialWindow = false
+  var updaterController: SPUStandardUpdaterController?
 
   override init() {
     super.init()
@@ -114,11 +116,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
+    // 初始化 Sparkle 自动更新组件
+    updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+
     settingsModel.onDisplayModeDidChange = { [weak self] mode in
       self?.applyDisplayMode(mode)
     }
     applyDisplayMode(settingsModel.displayMode)
     scheduleInitialWindowPresentation()
+  }
+
+  // MARK: - 软件更新
+
+  /// 触发 Sparkle 检查更新
+  @objc func checkForUpdates() {
+    updaterController?.checkForUpdates(nil)
   }
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

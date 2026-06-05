@@ -45,5 +45,9 @@
 	<true/>
 	<key>LSUIElement</key>
 	<true/>
+	<key>SUFeedURL</key>
+	<string>https://github.com/zombieht/BetterMenu/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>Js2aQftgUDvtBhDvXqFkOYvNb6DMJjBufREi3SjZozw=</string>
 </dict>
 </plist>

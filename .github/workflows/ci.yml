@@ -42,7 +42,21 @@ jobs:
           chmod +x script/package.sh
           ./script/package.sh > build.log 2>&1 || { echo "=== BUILD FAILED ==="; tail -n 200 build.log; exit 1; }
 
-      # 步骤 4：上传构建生成的 DMG 和 ZIP 归档制品
+      # 步骤 4：当推送以 'v' 开头的 tag 时，下载 Sparkle 工具生成 appcast.xml 并对其签名
+      - name: Generate Sparkle Appcast
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          # 1. 下载 Sparkle 二进制工具包
+          curl -L -o sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.9.2/Sparkle-2.9.2.tar.xz
+          mkdir sparkle-bin
+          tar -xf sparkle.tar.xz -C sparkle-bin
+
+          # 2. 生成并签名 appcast.xml
+          # Sparkle generate_appcast 将自动扫描指定的 dist/ 目录，读取环境变量 SUPrivateEDKey 对更新包签名
+          export SUPrivateEDKey="${{ secrets.SPARKLE_PRIVATE_KEY }}"
+          ./sparkle-bin/bin/generate_appcast dist/
+
+      # 步骤 5：上传构建生成的 DMG、ZIP 归档制品以及 appcast.xml
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -50,12 +64,13 @@ jobs:
           path: |
             dist/*.zip
             dist/*.dmg
+            dist/appcast.xml
 
-      # 步骤 5：当推送以 'v' 开头的 tag 时，自动创建 GitHub Release 并上传打包制品
+      # 步骤 6：当推送以 'v' 开头的 tag 时，自动创建 GitHub Release 并上传打包制品和 appcast.xml
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          gh release create "${{ github.ref_name }}" dist/*.zip dist/*.dmg \
+          gh release create "${{ github.ref_name }}" dist/*.zip dist/*.dmg dist/appcast.xml \
             --title "${{ github.ref_name }}" \
             --notes "BetterMenu Release ${{ github.ref_name }}"
         env:

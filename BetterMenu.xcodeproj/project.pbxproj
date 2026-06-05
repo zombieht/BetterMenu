@@ -30,6 +30,7 @@
 		A10000000000000000000700 /* SettingsMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000701 /* SettingsMonitor.swift */; };
 		A10000000000000000000710 /* MenuIconManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000711 /* MenuIconManager.swift */; };
 		A10000000000000000000720 /* FileCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000721 /* FileCreator.swift */; };
+		A65100FA5752180F6B4730FB /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 529E8C462C2C9F3A67CF1C58 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -68,9 +69,9 @@
 		A10000000000000000000019 /* BetterMenuFinderSync.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BetterMenuFinderSync.entitlements; sourceTree = "<group>"; };
 		A10000000000000000000020 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		A10000000000000000000025 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A10000000000000000000027 /* blank.docx */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Templates/blank.docx"; sourceTree = "<group>"; };
-		A10000000000000000000028 /* blank.xlsx */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Templates/blank.xlsx"; sourceTree = "<group>"; };
-		A10000000000000000000029 /* blank.pptx */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Templates/blank.pptx"; sourceTree = "<group>"; };
+		A10000000000000000000027 /* blank.docx */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Templates/blank.docx; sourceTree = "<group>"; };
+		A10000000000000000000028 /* blank.xlsx */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Templates/blank.xlsx; sourceTree = "<group>"; };
+		A10000000000000000000029 /* blank.pptx */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Templates/blank.pptx; sourceTree = "<group>"; };
 		A10000000000000000000200 /* BetterMenuSettingsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuSettingsModel.swift; sourceTree = "<group>"; };
 		A10000000000000000000201 /* BetterMenuSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuSettingsView.swift; sourceTree = "<group>"; };
 		A10000000000000000000301 /* BetterMenuShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuShared.swift; sourceTree = "<group>"; };
@@ -92,6 +93,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A65100FA5752180F6B4730FB /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -181,6 +183,9 @@
 				A10000000000000000000061 /* PBXTargetDependency */,
 			);
 			name = BetterMenu;
+			packageProductDependencies = (
+				529E8C462C2C9F3A67CF1C58 /* Sparkle */,
+			);
 			productName = BetterMenu;
 			productReference = A10000000000000000000011 /* BetterMenu.app */;
 			productType = "com.apple.product-type.application";
@@ -231,6 +236,9 @@
 				Base,
 			);
 			mainGroup = A10000000000000000000021;
+			packageReferences = (
+				6F352A76DCFF9984226DDC2B /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = A10000000000000000000024 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -545,6 +553,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6F352A76DCFF9984226DDC2B /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		529E8C462C2C9F3A67CF1C58 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6F352A76DCFF9984226DDC2B /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A10000000000000000000041 /* Project object */;
 }

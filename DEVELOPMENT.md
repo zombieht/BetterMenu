@@ -51,3 +51,38 @@ BetterMenuFinderSync/
 - **Swift 6 Concurrency 并发安全**：编写异步或跨 Target 通信的工具类时，必须按照 Swift 6 安全规范进行严格类型隔离，或使用锁机制辅以 `nonisolated(unsafe)` 消除编译警告。
 - **Xcode 项目同步**：新增 Swift 源文件后，必须同步注册在 `BetterMenu.xcodeproj/project.pbxproj` 对应的 Target 编译阶段。
 - **文档维护**：更改项目行为、扩展逻辑或业务边界时，必须同步修改本指南及 `README.md`。
+
+---
+
+## 🔁 软件更新与自动化发布 (Sparkle)
+
+本项目集成了 **Sparkle 2** 自动更新框架。在您正式发布软件前，需要在本地生成一对 Ed25519 密钥：
+
+### 1. 零依赖生成密钥对
+您可以使用以下任意一种无需下载额外依赖包的命令在终端生成密钥：
+
+* **使用 Swift & CryptoKit（推荐，macOS 自带）**：
+  ```bash
+  swift -e '
+  import CryptoKit
+  import Foundation
+  let privateKey = Curve25519.Signing.PrivateKey()
+  print("SUPublicEDKey (写入 Info.plist):\n\(privateKey.publicKey.rawRepresentation.base64EncodedString())")
+  print("\nSUPrivateEDKey (写入 GitHub Secrets):\n\(privateKey.rawRepresentation.base64EncodedString())")
+  '
+  ```
+* **使用 OpenSSL（macOS 自带）**：
+  ```bash
+  openssl genpkey -algorithm ED25519 -out private.pem && \
+  echo "SUPublicEDKey (写入 Info.plist):" && \
+  openssl pkey -in private.pem -pubout -outform DER | tail -c 32 | base64 && \
+  echo "SUPrivateEDKey (写入 GitHub Secrets):" && \
+  openssl pkey -in private.pem -outform DER | tail -c 32 | base64 && \
+  rm private.pem
+  ```
+
+### 2. 配置与发布步骤
+1. **配置公钥**：将生成的 **`SUPublicEDKey`（公钥）** 填入项目中的 `BetterMenu/Info.plist` 的 `SUPublicEDKey` 键值中。
+2. **配置私钥**：将生成的 **`SUPrivateEDKey`（私钥）** 配置到您的 GitHub 仓库的 Secrets 中，变量名设置为 `SPARKLE_PRIVATE_KEY`。
+3. **触发自动化部署**：每次推送以 `v` 开头的 Tag（如 `v1.0.1`），GitHub Actions 工作流将自动使用此私钥对应用包进行签名，生成描述文件 `appcast.xml`，并随 Release 一同分发。客户端将通过 `https://github.com/zombieht/BetterMenu/releases/latest/download/appcast.xml` 获取最新的更新信息并下载安全的更新包。
+
