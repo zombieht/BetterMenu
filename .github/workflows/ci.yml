@@ -57,9 +57,8 @@ jobs:
           mkdir -p dist-dmg
           mv dist/*.dmg dist-dmg/
 
-          # 通过 stdin 安全传入私钥，并在传输前自动过滤可能多复制的提示语、空格或换行符
-          CLEANED_KEY=$(echo "${{ secrets.SPARKLE_PRIVATE_KEY }}" | tr -d '\r' | tail -n 1 | tr -d ' ')
-          echo -n "$CLEANED_KEY" | ./sparkle-bin/bin/generate_appcast --ed-key-file - dist/
+          # 通过 stdin 安全传入私钥，供 generate_appcast 进行签名
+          echo "${{ secrets.SPARKLE_PRIVATE_KEY }}" | ./sparkle-bin/bin/generate_appcast --ed-key-file - dist/
 
           # 恢复 .dmg 文件到 dist/ 目录，以供后续步骤打包上传和创建 Release 使用
           mv dist-dmg/*.dmg dist/
