@@ -1,0 +1,62 @@
+# GitHub Actions 持续集成配置文件
+# 本工作流用于在每次推送或合并请求到 main/master 分支时，自动对 macOS 应用进行构建与打包。
+
+name: CI
+
+# 触发条件：当推送或创建针对 main、master 分支的 PR，或者推送 v 开头的 tag 时触发
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+
+# 允许工作流向仓库写入内容，以创建和发布 GitHub Release
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Package
+    runs-on: macos-latest
+
+    steps:
+      # 步骤 1：检出仓库代码
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # 步骤 2：检查 Xcode 开发环境（使用运行器默认自带的最新版本）
+      - name: Set up Xcode
+        run: |
+          xcodebuild -version
+
+      # 步骤 2.5：安装 create-dmg 以启用精美 DMG 打包布局
+      - name: Install create-dmg
+        run: |
+          brew install create-dmg
+
+      # 步骤 3：运行项目打包脚本进行编译和打包（若失败则输出最后 200 行日志辅助排查）
+      - name: Build and Package
+        run: |
+          chmod +x script/package.sh
+          ./script/package.sh > build.log 2>&1 || { echo "=== BUILD FAILED ==="; tail -n 200 build.log; exit 1; }
+
+      # 步骤 4：上传构建生成的 DMG 和 ZIP 归档制品
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: BetterMenu-Release
+          path: |
+            dist/*.zip
+            dist/*.dmg
+
+      # 步骤 5：当推送以 'v' 开头的 tag 时，自动创建 GitHub Release 并上传打包制品
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          gh release create "${{ github.ref_name }}" dist/*.zip dist/*.dmg \
+            --title "${{ github.ref_name }}" \
+            --notes "BetterMenu Release ${{ github.ref_name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

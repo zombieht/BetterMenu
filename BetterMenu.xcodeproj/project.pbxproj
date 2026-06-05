@@ -1,0 +1,550 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* main.swift */; };
+		A10000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* AppDelegate.swift */; };
+		A10000000000000000000003 /* FinderSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* FinderSync.swift */; };
+		A10000000000000000000004 /* BetterMenuFinderSync.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* BetterMenuFinderSync.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000025 /* Assets.xcassets */; };
+		A10000000000000000000007 /* blank.docx in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000027 /* blank.docx */; };
+		A10000000000000000000008 /* blank.xlsx in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000028 /* blank.xlsx */; };
+		A10000000000000000000009 /* blank.pptx in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000029 /* blank.pptx */; };
+		A10000000000000000000100 /* BetterMenuSettingsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000200 /* BetterMenuSettingsModel.swift */; };
+		A10000000000000000000101 /* BetterMenuSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000201 /* BetterMenuSettingsView.swift */; };
+		A10000000000000000000300 /* BetterMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000301 /* BetterMenuShared.swift */; };
+		A10000000000000000000302 /* BetterMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000301 /* BetterMenuShared.swift */; };
+		A10000000000000000000402 /* TerminalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000400 /* TerminalApp.swift */; };
+		A10000000000000000000403 /* ExternalAppLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000401 /* ExternalAppLauncher.swift */; };
+		A10000000000000000000500 /* BetterMenuGeneralSettingsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000510 /* BetterMenuGeneralSettingsViews.swift */; };
+		A10000000000000000000501 /* BetterMenuFileTypeSettingsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000511 /* BetterMenuFileTypeSettingsViews.swift */; };
+		A10000000000000000000502 /* BetterMenuPermissionAboutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000512 /* BetterMenuPermissionAboutViews.swift */; };
+		A10000000000000000000503 /* BetterMenuSettingsComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000513 /* BetterMenuSettingsComponents.swift */; };
+		A10000000000000000000600 /* SystemCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000601 /* SystemCommand.swift */; };
+		A10000000000000000000610 /* IconCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000611 /* IconCacheManager.swift */; };
+		A10000000000000000000700 /* SettingsMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000701 /* SettingsMonitor.swift */; };
+		A10000000000000000000710 /* MenuIconManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000711 /* MenuIconManager.swift */; };
+		A10000000000000000000720 /* FileCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000721 /* FileCreator.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A10000000000000000000062 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000041 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000032;
+			remoteInfo = BetterMenuFinderSync;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A10000000000000000000054 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A10000000000000000000004 /* BetterMenuFinderSync.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A10000000000000000000011 /* BetterMenu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BetterMenu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000012 /* BetterMenuFinderSync.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BetterMenuFinderSync.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000013 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		A10000000000000000000014 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A10000000000000000000015 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000016 /* BetterMenu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BetterMenu.entitlements; sourceTree = "<group>"; };
+		A10000000000000000000017 /* FinderSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderSync.swift; sourceTree = "<group>"; };
+		A10000000000000000000018 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000019 /* BetterMenuFinderSync.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BetterMenuFinderSync.entitlements; sourceTree = "<group>"; };
+		A10000000000000000000020 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		A10000000000000000000025 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A10000000000000000000027 /* blank.docx */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Templates/blank.docx"; sourceTree = "<group>"; };
+		A10000000000000000000028 /* blank.xlsx */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Templates/blank.xlsx"; sourceTree = "<group>"; };
+		A10000000000000000000029 /* blank.pptx */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Templates/blank.pptx"; sourceTree = "<group>"; };
+		A10000000000000000000200 /* BetterMenuSettingsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuSettingsModel.swift; sourceTree = "<group>"; };
+		A10000000000000000000201 /* BetterMenuSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuSettingsView.swift; sourceTree = "<group>"; };
+		A10000000000000000000301 /* BetterMenuShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuShared.swift; sourceTree = "<group>"; };
+		A10000000000000000000400 /* TerminalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalApp.swift; sourceTree = "<group>"; };
+		A10000000000000000000401 /* ExternalAppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalAppLauncher.swift; sourceTree = "<group>"; };
+		A10000000000000000000510 /* BetterMenuGeneralSettingsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuGeneralSettingsViews.swift; sourceTree = "<group>"; };
+		A10000000000000000000511 /* BetterMenuFileTypeSettingsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuFileTypeSettingsViews.swift; sourceTree = "<group>"; };
+		A10000000000000000000512 /* BetterMenuPermissionAboutViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuPermissionAboutViews.swift; sourceTree = "<group>"; };
+		A10000000000000000000513 /* BetterMenuSettingsComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuSettingsComponents.swift; sourceTree = "<group>"; };
+		A10000000000000000000601 /* SystemCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCommand.swift; sourceTree = "<group>"; };
+		A10000000000000000000611 /* IconCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconCacheManager.swift; sourceTree = "<group>"; };
+		A10000000000000000000701 /* SettingsMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMonitor.swift; sourceTree = "<group>"; };
+		A10000000000000000000711 /* MenuIconManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuIconManager.swift; sourceTree = "<group>"; };
+		A10000000000000000000721 /* FileCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCreator.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000052 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000056 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000000000000000000021 = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000022 /* BetterMenu */,
+				A10000000000000000000023 /* BetterMenuFinderSync */,
+				A10000000000000000000020 /* README.md */,
+				A10000000000000000000024 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000022 /* BetterMenu */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000013 /* main.swift */,
+				A10000000000000000000014 /* AppDelegate.swift */,
+				A10000000000000000000400 /* TerminalApp.swift */,
+				A10000000000000000000401 /* ExternalAppLauncher.swift */,
+				A10000000000000000000200 /* BetterMenuSettingsModel.swift */,
+				A10000000000000000000201 /* BetterMenuSettingsView.swift */,
+				A10000000000000000000510 /* BetterMenuGeneralSettingsViews.swift */,
+				A10000000000000000000511 /* BetterMenuFileTypeSettingsViews.swift */,
+				A10000000000000000000512 /* BetterMenuPermissionAboutViews.swift */,
+				A10000000000000000000513 /* BetterMenuSettingsComponents.swift */,
+				A10000000000000000000301 /* BetterMenuShared.swift */,
+				A10000000000000000000601 /* SystemCommand.swift */,
+				A10000000000000000000611 /* IconCacheManager.swift */,
+				A10000000000000000000025 /* Assets.xcassets */,
+				A10000000000000000000015 /* Info.plist */,
+				A10000000000000000000016 /* BetterMenu.entitlements */,
+			);
+			path = BetterMenu;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000023 /* BetterMenuFinderSync */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000017 /* FinderSync.swift */,
+				A10000000000000000000701 /* SettingsMonitor.swift */,
+				A10000000000000000000711 /* MenuIconManager.swift */,
+				A10000000000000000000721 /* FileCreator.swift */,
+				A10000000000000000000027 /* blank.docx */,
+				A10000000000000000000028 /* blank.xlsx */,
+				A10000000000000000000029 /* blank.pptx */,
+				A10000000000000000000018 /* Info.plist */,
+				A10000000000000000000019 /* BetterMenuFinderSync.entitlements */,
+			);
+			path = BetterMenuFinderSync;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000024 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000011 /* BetterMenu.app */,
+				A10000000000000000000012 /* BetterMenuFinderSync.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000031 /* BetterMenu */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000082 /* Build configuration list for PBXNativeTarget "BetterMenu" */;
+			buildPhases = (
+				A10000000000000000000051 /* Sources */,
+				A10000000000000000000052 /* Frameworks */,
+				A10000000000000000000053 /* Resources */,
+				A10000000000000000000054 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000000000000000000061 /* PBXTargetDependency */,
+			);
+			name = BetterMenu;
+			productName = BetterMenu;
+			productReference = A10000000000000000000011 /* BetterMenu.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A10000000000000000000032 /* BetterMenuFinderSync */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000083 /* Build configuration list for PBXNativeTarget "BetterMenuFinderSync" */;
+			buildPhases = (
+				A10000000000000000000055 /* Sources */,
+				A10000000000000000000056 /* Frameworks */,
+				A10000000000000000000057 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BetterMenuFinderSync;
+			productName = BetterMenuFinderSync;
+			productReference = A10000000000000000000012 /* BetterMenuFinderSync.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000000000000000000041 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1530;
+				LastUpgradeCheck = 1530;
+				TargetAttributes = {
+					A10000000000000000000031 = {
+						CreatedOnToolsVersion = 15.3;
+						ProvisioningStyle = Automatic;
+					};
+					A10000000000000000000032 = {
+						CreatedOnToolsVersion = 15.3;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = A10000000000000000000081 /* Build configuration list for PBXProject "BetterMenu" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10000000000000000000021;
+			productRefGroup = A10000000000000000000024 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000031 /* BetterMenu */,
+				A10000000000000000000032 /* BetterMenuFinderSync */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000053 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000005 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000057 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000007 /* blank.docx in Resources */,
+				A10000000000000000000008 /* blank.xlsx in Resources */,
+				A10000000000000000000009 /* blank.pptx in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000051 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* main.swift in Sources */,
+				A10000000000000000000002 /* AppDelegate.swift in Sources */,
+				A10000000000000000000402 /* TerminalApp.swift in Sources */,
+				A10000000000000000000403 /* ExternalAppLauncher.swift in Sources */,
+				A10000000000000000000100 /* BetterMenuSettingsModel.swift in Sources */,
+				A10000000000000000000101 /* BetterMenuSettingsView.swift in Sources */,
+				A10000000000000000000500 /* BetterMenuGeneralSettingsViews.swift in Sources */,
+				A10000000000000000000501 /* BetterMenuFileTypeSettingsViews.swift in Sources */,
+				A10000000000000000000502 /* BetterMenuPermissionAboutViews.swift in Sources */,
+				A10000000000000000000503 /* BetterMenuSettingsComponents.swift in Sources */,
+				A10000000000000000000300 /* BetterMenuShared.swift in Sources */,
+				A10000000000000000000600 /* SystemCommand.swift in Sources */,
+				A10000000000000000000610 /* IconCacheManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000055 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000003 /* FinderSync.swift in Sources */,
+				A10000000000000000000302 /* BetterMenuShared.swift in Sources */,
+				A10000000000000000000700 /* SettingsMonitor.swift in Sources */,
+				A10000000000000000000710 /* MenuIconManager.swift in Sources */,
+				A10000000000000000000720 /* FileCreator.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A10000000000000000000061 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000000000000000000032 /* BetterMenuFinderSync */;
+			targetProxy = A10000000000000000000062 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A10000000000000000000071 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = BetterMenu/BetterMenu.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 22;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BetterMenu/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 2.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zombie.BetterMenu;
+				PRODUCT_NAME = BetterMenu;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A10000000000000000000072 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = BetterMenu/BetterMenu.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 22;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BetterMenu/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 2.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zombie.BetterMenu;
+				PRODUCT_NAME = BetterMenu;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A10000000000000000000073 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = BetterMenuFinderSync/BetterMenuFinderSync.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 22;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BetterMenuFinderSync/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 2.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zombie.BetterMenu.FinderSync;
+				PRODUCT_NAME = BetterMenuFinderSync;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				WRAPPER_EXTENSION = appex;
+			};
+			name = Debug;
+		};
+		A10000000000000000000074 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = BetterMenuFinderSync/BetterMenuFinderSync.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 22;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BetterMenuFinderSync/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 2.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zombie.BetterMenu.FinderSync;
+				PRODUCT_NAME = BetterMenuFinderSync;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				WRAPPER_EXTENSION = appex;
+			};
+			name = Release;
+		};
+		A10000000000000000000075 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+			};
+			name = Debug;
+		};
+		A10000000000000000000076 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000000000000000000081 /* Build configuration list for PBXProject "BetterMenu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000075 /* Debug */,
+				A10000000000000000000076 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000082 /* Build configuration list for PBXNativeTarget "BetterMenu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000071 /* Debug */,
+				A10000000000000000000072 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000083 /* Build configuration list for PBXNativeTarget "BetterMenuFinderSync" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000073 /* Debug */,
+				A10000000000000000000074 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000000000000000000041 /* Project object */;
+}

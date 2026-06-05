@@ -1,0 +1,30 @@
+# macOS 系统生成文件，避免 Finder 元数据进入仓库。
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# 本地开发工具状态，仅与当前机器或当前会话相关。
+.codex/
+
+# Xcode / Swift 构建缓存与用户本地状态。
+DerivedData/
+build/
+.build/
+.swiftpm/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# 打包、归档和发布产物，均可由源码或脚本重新生成。
+dist/
+*.app/
+*.dSYM/
+*.ipa
+*.pkg
+*.dmg
+
+# 本地设计源文件或临时素材，不影响应用构建。
+docs/
