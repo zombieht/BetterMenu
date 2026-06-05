@@ -52,15 +52,13 @@ jobs:
           tar -xf sparkle.tar.xz -C sparkle-bin
 
           # 2. 生成并签名 appcast.xml
-          # Sparkle generate_appcast 将自动扫描指定的 dist/ 目录，读取环境变量 SUPrivateEDKey 对更新包签名
-          export SUPrivateEDKey="${{ secrets.SPARKLE_PRIVATE_KEY }}"
-
           # 为防止 SUSparkleErrorDomain Code=1002 (Duplicate updates) 报错，
           # 临时移除非 Sparkle 更新必需的 .dmg 文件（自动更新推荐分发 .zip 包）
           mkdir -p dist-dmg
           mv dist/*.dmg dist-dmg/
 
-          ./sparkle-bin/bin/generate_appcast dist/
+          # 通过 stdin 安全传入私钥，供 generate_appcast 进行签名
+          echo "${{ secrets.SPARKLE_PRIVATE_KEY }}" | ./sparkle-bin/bin/generate_appcast --ed-key-file - dist/
 
           # 恢复 .dmg 文件到 dist/ 目录，以供后续步骤打包上传和创建 Release 使用
           mv dist-dmg/*.dmg dist/
