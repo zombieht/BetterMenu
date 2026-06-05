@@ -1,0 +1,2 @@
+CFBundleDisplayName = "BetterMenu";
+NSAppleEventsUsageDescription = "BetterMenu needs to control Terminal to open the current folder and switch to the corresponding path.";

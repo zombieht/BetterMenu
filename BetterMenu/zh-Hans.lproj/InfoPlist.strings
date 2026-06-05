@@ -1,0 +1,2 @@
+CFBundleDisplayName = "BetterMenu";
+NSAppleEventsUsageDescription = "BetterMenu 需要控制“终端”来打开当前文件夹并自动切换到对应路径。";

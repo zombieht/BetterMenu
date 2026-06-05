@@ -31,6 +31,7 @@
 		A10000000000000000000710 /* MenuIconManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000711 /* MenuIconManager.swift */; };
 		A10000000000000000000720 /* FileCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000721 /* FileCreator.swift */; };
 		A65100FA5752180F6B4730FB /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 529E8C462C2C9F3A67CF1C58 /* Sparkle */; };
+		A10000000000000000000093 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -86,6 +87,8 @@
 		A10000000000000000000701 /* SettingsMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMonitor.swift; sourceTree = "<group>"; };
 		A10000000000000000000711 /* MenuIconManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuIconManager.swift; sourceTree = "<group>"; };
 		A10000000000000000000721 /* FileCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCreator.swift; sourceTree = "<group>"; };
+		A10000000000000000000091 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A10000000000000000000092 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,6 +139,7 @@
 				A10000000000000000000025 /* Assets.xcassets */,
 				A10000000000000000000015 /* Info.plist */,
 				A10000000000000000000016 /* BetterMenu.entitlements */,
+				A10000000000000000000090 /* InfoPlist.strings */,
 			);
 			path = BetterMenu;
 			sourceTree = "<group>";
@@ -166,6 +170,18 @@
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXVariantGroup section */
+		A10000000000000000000090 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A10000000000000000000091 /* en */,
+				A10000000000000000000092 /* zh-Hans */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin PBXNativeTarget section */
 		A10000000000000000000031 /* BetterMenu */ = {
@@ -234,6 +250,7 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = A10000000000000000000021;
 			packageReferences = (
@@ -255,6 +272,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000005 /* Assets.xcassets in Resources */,
+				A10000000000000000000093 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
