@@ -59,27 +59,18 @@ BetterMenuFinderSync/
 本项目集成了 **Sparkle 2** 自动更新框架。在您正式发布软件前，需要在本地生成一对 Ed25519 密钥：
 
 ### 1. 零依赖生成密钥对
-您可以使用以下任意一种无需下载额外依赖包的命令在终端生成密钥：
+由于您开发的是 macOS 应用，您的 Mac 已经自带了 Swift 编译环境。请直接在您的终端复制并运行以下这一行命令。它将自动生成符合 Sparkle 2 要求的 32 字节公钥与 64 字节拼接私钥（Base64 编码后为 88 位字符）：
 
-* **使用 Swift & CryptoKit（推荐，macOS 自带）**：
-  ```bash
-  swift -e '
-  import CryptoKit
-  import Foundation
-  let privateKey = Curve25519.Signing.PrivateKey()
-  print("SUPublicEDKey (写入 Info.plist):\n\(privateKey.publicKey.rawRepresentation.base64EncodedString())")
-  print("\nSUPrivateEDKey (写入 GitHub Secrets):\n\(privateKey.rawRepresentation.base64EncodedString())")
-  '
-  ```
-* **使用 OpenSSL（macOS 自带）**：
-  ```bash
-  openssl genpkey -algorithm ED25519 -out private.pem && \
-  echo "SUPublicEDKey (写入 Info.plist):" && \
-  openssl pkey -in private.pem -pubout -outform DER | tail -c 32 | base64 && \
-  echo "SUPrivateEDKey (写入 GitHub Secrets):" && \
-  openssl pkey -in private.pem -outform DER | tail -c 32 | base64 && \
-  rm private.pem
-  ```
+```bash
+swift -e '
+import CryptoKit
+import Foundation
+let privateKey = Curve25519.Signing.PrivateKey()
+let combinedPrivate = privateKey.rawRepresentation + privateKey.publicKey.rawRepresentation
+print("SUPublicEDKey (写入 Info.plist):\n\(privateKey.publicKey.rawRepresentation.base64EncodedString())")
+print("\nSUPrivateEDKey (写入 GitHub Secrets):\n\(combinedPrivate.base64EncodedString())")
+'
+```
 
 ### 2. 配置与发布步骤
 1. **配置公钥**：将生成的 **`SUPublicEDKey`（公钥）** 填入项目中的 `BetterMenu/Info.plist` 的 `SUPublicEDKey` 键值中。
