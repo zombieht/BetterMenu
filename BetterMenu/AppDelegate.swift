@@ -237,8 +237,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
 
-    let pathQuery = components.queryItems?.first(where: { $0.name == "path" })?.value
-    guard let path = pathQuery?.removingPercentEncoding else {
+    // URLComponents.queryItems 会自动对参数值做百分号解码。
+    // 这里不能再次调用 removingPercentEncoding，否则文件名中真实存在的 "%20"
+    // 会被误还原为空格，导致外部应用打开错误路径。
+    guard let path = components.queryItems?.first(where: { $0.name == "path" })?.value else {
       logger.error("Missing path query parameter in URL: \(url.absoluteString, privacy: .public)")
       return
     }
