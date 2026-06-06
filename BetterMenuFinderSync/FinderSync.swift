@@ -270,8 +270,16 @@ final class FinderSync: FIFinderSync {
   }
 
   private func executeDelegatedAction(_ action: FinderAction) {
-    guard let directory = resolveFinderLocation(for: .openSelectionContainer) else {
-      showError(message: "无法确定目标文件夹。")
+    // 终端动作需要获取所在文件夹路径，编辑器动作则直接获取选中的文件/文件夹本身路径
+    let targetUrl: URL?
+    if action.id == "terminal" {
+      targetUrl = resolveFinderLocation(for: .openSelectionContainer)
+    } else {
+      targetUrl = resolveFinderLocation(for: .openSelection)
+    }
+
+    guard let resolvedUrl = targetUrl else {
+      showError(message: "无法确定目标路径。")
       return
     }
 
@@ -280,7 +288,7 @@ final class FinderSync: FIFinderSync {
     components.host = "run-action"
     components.queryItems = [
       URLQueryItem(name: "id", value: action.id),
-      URLQueryItem(name: "path", value: directory.path),
+      URLQueryItem(name: "path", value: resolvedUrl.path),
     ]
 
     guard let requestUrl = components.url else {
@@ -334,6 +342,8 @@ final class FinderSync: FIFinderSync {
       return (targetedUrl ?? selectedUrl)?.directoryForFinderAction() ?? desktopUrl
     case .openSelectionContainer:
       return (selectedUrl ?? targetedUrl)?.directoryForFinderAction() ?? desktopUrl
+    case .openSelection:
+      return selectedUrl ?? targetedUrl ?? desktopUrl
     }
   }
 
@@ -379,6 +389,7 @@ private enum FinderLocationIntent {
   case createFileInContainer
   case copyCurrentPath
   case openSelectionContainer
+  case openSelection
 }
 
 extension URL {

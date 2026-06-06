@@ -29,14 +29,16 @@ struct ExternalAppLauncher {
     }
   }
 
-  /// 在指定的应用程序中打开目标目录。
+  /// 在指定的应用程序中打开目标路径（支持文件和目录）。
   func openInApplication(atPath path: String, bundleIdentifiers: [String], appName: String) {
-    let directoryUrl = URL(fileURLWithPath: path, isDirectory: true)
-    guard FileManager.default.fileExists(atPath: directoryUrl.path) else {
+    var isDirectory: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
       logger.error(
         "\(appName, privacy: .public) open path does not exist: \(path, privacy: .public)")
       return
     }
+
+    let targetUrl = URL(fileURLWithPath: path, isDirectory: isDirectory.boolValue)
 
     var appUrl: URL? = nil
     var usedBundleId: String? = nil
@@ -49,7 +51,7 @@ struct ExternalAppLauncher {
     }
 
     if appUrl != nil, let bundleId = usedBundleId {
-      openDirectoryUsingWorkspace(directoryUrl, bundleIdentifier: bundleId)
+      openDirectoryUsingWorkspace(targetUrl, bundleIdentifier: bundleId)
     } else {
       logger.warning("\(appName, privacy: .public) is not installed on this machine")
       missingApplicationHandler(appName)
@@ -112,8 +114,18 @@ struct ExternalAppLauncher {
   private func fallbackToNativeTerminal(directoryUrl: URL) {
     let success = runTerminalAppleScript(path: directoryUrl.path)
     if !success {
-      logger.warning("Terminal AppleScript failed, fallback to workspace open")
-      openDirectoryUsingWorkspace(directoryUrl, bundleIdentifier: "com.apple.Terminal")
+      logger.warning("Terminal AppleScript failed, fallback to open command")
+      // NSWorkspace.open([directoryUrl], withApplicationAt:) 在 Terminal 未运行时
+      // 会创建两个窗口（启动默认窗口 + 打开目录窗口）。
+      // 使用 `open -a Terminal /path` 命令则始终只创建一个窗口。
+      let process = Process()
+      process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+      process.arguments = ["-a", "Terminal", directoryUrl.path]
+      do {
+        try process.run()
+      } catch {
+        logger.error("open command failed: \(error.localizedDescription, privacy: .public)")
+      }
     }
   }
 
@@ -139,18 +151,14 @@ struct ExternalAppLauncher {
         end tell
         """
     } else {
+      // Terminal 未运行时，直接用 do script（不带 in 参数），
+      // 它会隐式启动 Terminal 并创建唯一的窗口来执行命令。
+      // 不能先 activate，否则 Terminal 会先创建默认窗口，
+      // do script 再创建一个窗口，导致出现两个终端。
       scriptText = """
         tell application "Terminal"
+            do script "cd " & quoted form of "\(path)"
             activate
-            repeat 50 times
-                if (count of windows) > 0 then exit repeat
-                delay 0.1
-            end repeat
-            if (count of windows) > 0 then
-                do script "cd " & quoted form of "\(path)" in front window
-            else
-                do script "cd " & quoted form of "\(path)"
-            end if
         end tell
         """
     }
