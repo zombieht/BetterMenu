@@ -50,8 +50,10 @@ struct BetterMenuSettingsView: View {
       Divider()
       ScrollView {
         selectedPage
+          // 适配忽略安全区后的顶部间距，保持与左侧侧边栏标题对齐
           .padding(.horizontal, 22)
-          .padding(.vertical, 18)
+          .padding(.top, 52)
+          .padding(.bottom, 18)
           .frame(maxWidth: detailMaxWidth, alignment: .leading)
           .frame(maxWidth: .infinity, alignment: .center)
       }
@@ -69,6 +71,8 @@ struct BetterMenuSettingsView: View {
       )
     }
     .frame(minWidth: sidebarWidth + detailMinWidth + 1, minHeight: 550)
+    // 忽略安全区域，使 GlassBackground 背景能够贴合窗口边缘，解决滚动条右侧出现白边的问题
+    .ignoresSafeArea()
     .environmentObject(model)
   }
 
