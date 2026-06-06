@@ -1,12 +1,20 @@
-# BetterMenu
-
 <p align="center">
-  <img src="https://img.shields.io/badge/platform-macOS-blue.svg" alt="Platform: macOS" />
-  <img src="https://img.shields.io/badge/Swift-6.0+-orange.svg" alt="Swift: 6.0+" />
-  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" />
+  <img src="BetterMenu/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" alt="BetterMenu 图标" width="128" />
 </p>
 
-BetterMenu 是一款功能强大的 macOS 右键菜单增强工具，让 macOS 的右键菜单像 Windows 一样高效好用。
+<h1 align="center">BetterMenu</h1>
+
+<p align="center">
+  <strong>BetterMenu 是一款功能强大的 macOS 右键菜单增强工具，让 macOS 的右键菜单像 Windows 一样高效好用。</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-macOS%2015.0%2B-555555?logo=apple&logoColor=white" alt="Platform: macOS 15.0+" />
+  <img src="https://img.shields.io/badge/Language-Swift%206.0-F05138?logo=swift&logoColor=white" alt="Language: Swift 6.0" />
+  <img src="https://img.shields.io/badge/License-MIT-4CAF00" alt="License: MIT" />
+</p>
+
+---
 
 <p align="center">
   <img src="docs/screenshots/screenshot_context_menu.png" alt="BetterMenu 右键菜单效果" width="45%" />
