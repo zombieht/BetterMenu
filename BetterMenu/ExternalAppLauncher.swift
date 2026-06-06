@@ -191,18 +191,21 @@ struct ExternalAppLauncher {
     configuration.activates = true
     configuration.promptsUserIfNeeded = true
 
+    // 完成回调在后台队列 (com.apple.launchservices.open-queue) 执行，
+    // 不能直接访问 @MainActor 隔离成员，需用 @Sendable 标记并手动派发回主线程。
+    nonisolated(unsafe) let log = logger
     NSWorkspace.shared.open([directoryUrl], withApplicationAt: appUrl, configuration: configuration)
-    {
-      runningApplication,
-      error in
+    { @Sendable runningApplication, error in
       if let error = error {
         let message = error.localizedDescription
-        logger.error(
+        log.error(
           "Workspace open failed for \(bundleIdentifier): \(message, privacy: .public)"
         )
         return
       }
-      runningApplication?.activate(options: [.activateAllWindows])
+      DispatchQueue.main.async {
+        runningApplication?.activate(options: [.activateAllWindows])
+      }
     }
   }
 }
