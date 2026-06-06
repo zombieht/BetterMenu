@@ -15,17 +15,21 @@
 ```text
 BetterMenu/
   AppDelegate.swift              # 主应用生命周期、窗口和 URL Scheme 路由
-  BetterMenuSettingsModel.swift  # 设置页 UI 状态绑定与业务分发
-  BetterMenuSettingsView.swift   # SwiftUI 设置界面容器与侧边栏导航
-  BetterMenuGeneralSettingsViews.swift    # 通用设置与右键快捷操作页面
-  BetterMenuFileTypeSettingsViews.swift   # 新建文件类型、后缀标签与菜单预览
-  BetterMenuPermissionAboutViews.swift    # 权限、Finder 重启与关于页面
-  BetterMenuSettingsComponents.swift      # 设置页共享 UI 组件与流式布局
+  main.swift                     # 主应用入口点
   BetterMenuShared.swift         # 共享核心：统一 FileDefinition、全局 constants 与公共映射函数
-  ExternalAppLauncher.swift      # 终端、VS Code 等外部应用一键拉起服务
-  TerminalApp.swift              # 可选终端应用定义列表
-  SystemCommand.swift            # 底层命令行调用 Process 进程运行封装
-  IconCacheManager.swift         # 专职后台图标渲染、预热与序列化磁盘缓存服务
+  Models/
+    BetterMenuSettingsModel.swift  # 设置页 UI 状态绑定与业务分发
+  Views/
+    BetterMenuSettingsView.swift   # SwiftUI 设置界面容器与侧边栏导航
+    BetterMenuGeneralSettingsViews.swift    # 通用设置与右键快捷操作页面
+    BetterMenuFileTypeSettingsViews.swift   # 新建文件类型、后缀标签与菜单预览
+    BetterMenuPermissionAboutViews.swift    # 权限、Finder 重启与关于页面
+    BetterMenuSettingsComponents.swift      # 设置页共享 UI 组件与流式布局
+  Services/
+    ExternalAppLauncher.swift      # 终端、VS Code 等外部应用一键拉起服务
+    TerminalApp.swift              # 可选终端应用定义列表
+    SystemCommand.swift            # 底层命令行调用 Process 进程运行封装
+    IconCacheManager.swift         # 专职后台图标渲染、预热与序列化磁盘缓存服务
 
 BetterMenuFinderSync/
   FinderSync.swift               # Finder Sync 扩展入口、上下文交互与菜单组装（极简 Controller）

@@ -125,23 +125,47 @@
 			children = (
 				A10000000000000000000013 /* main.swift */,
 				A10000000000000000000014 /* AppDelegate.swift */,
-				A10000000000000000000400 /* TerminalApp.swift */,
-				A10000000000000000000401 /* ExternalAppLauncher.swift */,
-				A10000000000000000000200 /* BetterMenuSettingsModel.swift */,
-				A10000000000000000000201 /* BetterMenuSettingsView.swift */,
-				A10000000000000000000510 /* BetterMenuGeneralSettingsViews.swift */,
-				A10000000000000000000511 /* BetterMenuFileTypeSettingsViews.swift */,
-				A10000000000000000000512 /* BetterMenuPermissionAboutViews.swift */,
-				A10000000000000000000513 /* BetterMenuSettingsComponents.swift */,
+				A10000000000000000000901 /* Models */,
+				A10000000000000000000902 /* Views */,
+				A10000000000000000000903 /* Services */,
 				A10000000000000000000301 /* BetterMenuShared.swift */,
-				A10000000000000000000601 /* SystemCommand.swift */,
-				A10000000000000000000611 /* IconCacheManager.swift */,
 				A10000000000000000000025 /* Assets.xcassets */,
 				A10000000000000000000015 /* Info.plist */,
 				A10000000000000000000016 /* BetterMenu.entitlements */,
 				A10000000000000000000090 /* InfoPlist.strings */,
 			);
 			path = BetterMenu;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000901 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000200 /* BetterMenuSettingsModel.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000902 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000201 /* BetterMenuSettingsView.swift */,
+				A10000000000000000000510 /* BetterMenuGeneralSettingsViews.swift */,
+				A10000000000000000000511 /* BetterMenuFileTypeSettingsViews.swift */,
+				A10000000000000000000512 /* BetterMenuPermissionAboutViews.swift */,
+				A10000000000000000000513 /* BetterMenuSettingsComponents.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000903 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000400 /* TerminalApp.swift */,
+				A10000000000000000000401 /* ExternalAppLauncher.swift */,
+				A10000000000000000000601 /* SystemCommand.swift */,
+				A10000000000000000000611 /* IconCacheManager.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 		A10000000000000000000023 /* BetterMenuFinderSync */ = {
