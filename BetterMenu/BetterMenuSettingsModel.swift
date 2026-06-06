@@ -42,29 +42,11 @@ enum BetterMenuDisplayMode: String, CaseIterable, Identifiable {
 
 // MARK: - 图标管理器
 
-/// 用于为主应用界面提供合适尺寸 of PNG 或 SF Symbol 图标
+/// 用于为主应用界面提供合适尺寸的 PNG 或 SF Symbol 图标
 enum BetterMenuIcon {
   @MainActor
   static func icon(for id: String, size: NSSize) -> NSImage? {
-    let pathExtension: String
-    switch id {
-    case "txt": pathExtension = "txt"
-    case "md": pathExtension = "md"
-    case "docx": pathExtension = "docx"
-    case "xlsx": pathExtension = "xlsx"
-    case "pptx": pathExtension = "pptx"
-    case "json": pathExtension = "json"
-    case "blank": pathExtension = ""
-    case "py": pathExtension = "py"
-    case "html": pathExtension = "html"
-    case "sh": pathExtension = "sh"
-    default:
-      if id.hasPrefix("custom.") {
-        pathExtension = String(id.dropFirst("custom.".count))
-      } else {
-        pathExtension = id
-      }
-    }
+    let pathExtension = cleanExtension(for: id)
 
     // 使用 macOS 15+ 推荐的 UTType 现代化获取图标方法
     let type = UTType(filenameExtension: pathExtension) ?? .item
@@ -177,21 +159,21 @@ final class BetterMenuSettingsModel: ObservableObject {
 
   @Published var actions: [FinderAction] {
     didSet {
-      writeSharedSettings()
+      scheduleWriteSharedSettings()
     }
   }
 
   @Published var terminalType: String {
     didSet {
       UserDefaults.standard.set(terminalType, forKey: Self.terminalTypeKey)
-      writeSharedSettings()
+      scheduleWriteSharedSettings()
     }
   }
 
   @Published private var menuOrder: [String] {
     didSet {
       UserDefaults.standard.set(menuOrder, forKey: Self.menuOrderKey)
-      writeSharedSettings()
+      scheduleWriteSharedSettings()
     }
   }
 
@@ -199,6 +181,7 @@ final class BetterMenuSettingsModel: ObservableObject {
   var onDisplayModeDidChange: ((BetterMenuDisplayMode) -> Void)?
   nonisolated(unsafe) private var notificationObservers: [NSObjectProtocol] = []
   private var isSynchronizingLaunchAtLogin = false
+  private var writeDebounceWorkItem: DispatchWorkItem?
 
   // MARK: - 存储 Keys
 
@@ -211,6 +194,7 @@ final class BetterMenuSettingsModel: ObservableObject {
   // 向后兼容保留老版本的键
   private static let oldTerminalDirectEnabledKey = BetterMenuShared.oldTerminalDirectEnabledKey
   private static let oldPathCopyEnabledKey = BetterMenuShared.oldPathCopyEnabledKey
+  private static let didMigrateTerminalBundleIdsKey = "didMigrateTerminalBundleIds"
 
   // MARK: - 初始化
 
@@ -260,19 +244,7 @@ final class BetterMenuSettingsModel: ObservableObject {
     let storedTerminalType =
       sharedSettings.terminalType ?? UserDefaults.standard.string(forKey: Self.terminalTypeKey)
       ?? "com.apple.Terminal"
-    if storedTerminalType == "terminal" {
-      terminalType = "com.apple.Terminal"
-    } else if storedTerminalType == "iterm2" {
-      terminalType = "com.googlecode.iterm2"
-    } else if storedTerminalType == "ghostty" {
-      terminalType = "com.mitchellh.ghostty"
-    } else if storedTerminalType == "cmux" {
-      terminalType = "com.cmuxterm.app"
-    } else if storedTerminalType == "cmux-nightly" {
-      terminalType = "com.cmuxterm.app.nightly"
-    } else {
-      terminalType = storedTerminalType
-    }
+    terminalType = Self.migrateTerminalTypeIfNeeded(storedTerminalType)
 
     let storedCustomExtensions =
       sharedSettings.customExtensions ?? UserDefaults.standard.stringArray(
@@ -571,13 +543,13 @@ final class BetterMenuSettingsModel: ObservableObject {
 
   private func persistEnabledFileTypes() {
     UserDefaults.standard.set(Array(enabledFileTypes), forKey: Self.enabledFileTypesKey)
-    writeSharedSettings()
+    scheduleWriteSharedSettings()
   }
 
   private func persistCustomExtensions() {
     UserDefaults.standard.set(customExtensions, forKey: Self.customExtensionsKey)
     reconcileMenuOrder()
-    writeSharedSettings()
+    scheduleWriteSharedSettings()
   }
 
   private func updateLaunchAtLoginPreference(to enabled: Bool) {
@@ -717,6 +689,17 @@ final class BetterMenuSettingsModel: ObservableObject {
     return nil
   }
 
+  /// 节流写入共享设置，合并 300ms 内的多次调用为一次实际磁盘写入，
+  /// 避免批量操作时的重复 I/O 和图标预热。
+  private func scheduleWriteSharedSettings() {
+    writeDebounceWorkItem?.cancel()
+    let workItem = DispatchWorkItem { [weak self] in
+      self?.writeSharedSettings()
+    }
+    writeDebounceWorkItem = workItem
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+  }
+
   private func writeSharedSettings() {
     // 构建包含 actions 数据结构的配置 payload
     let actionsPayload = actions.map {
@@ -815,6 +798,29 @@ final class BetterMenuSettingsModel: ObservableObject {
 
   private func showAlert(title: String, message: String) {
     showAlert(UserFacingAlert(title: title, message: message, style: .informational))
+  }
+
+  // MARK: - 一次性数据迁移
+
+  /// 旧版本使用短名称（如 "terminal"、"iterm2"）保存终端偏好，
+  /// 新版本统一使用 Bundle Identifier。此方法在首次启动时将旧值映射为新值，
+  /// 并写入迁移标记避免后续重复执行。
+  private static func migrateTerminalTypeIfNeeded(_ stored: String) -> String {
+    guard !UserDefaults.standard.bool(forKey: didMigrateTerminalBundleIdsKey) else {
+      return stored
+    }
+
+    let legacyMapping: [String: String] = [
+      "terminal": "com.apple.Terminal",
+      "iterm2": "com.googlecode.iterm2",
+      "ghostty": "com.mitchellh.ghostty",
+      "cmux": "com.cmuxterm.app",
+      "cmux-nightly": "com.cmuxterm.app.nightly",
+    ]
+
+    let migrated = legacyMapping[stored] ?? stored
+    UserDefaults.standard.set(true, forKey: didMigrateTerminalBundleIdsKey)
+    return migrated
   }
 }
 

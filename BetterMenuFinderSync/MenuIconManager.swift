@@ -99,21 +99,19 @@ final class MenuIconManager: @unchecked Sendable {
     }
     symbolImage.size = targetSize
 
-    let image = NSImage(size: targetSize)
-    image.lockFocus()
-    NSGraphicsContext.current?.imageInterpolation = .high
+    // 使用 NSImage(size:flipped:drawingHandler:) 替代已弃用的 lockFocus/unlockFocus
+    let image = NSImage(size: targetSize, flipped: false) { drawRect in
+      NSGraphicsContext.current?.imageInterpolation = .high
+      symbolImage.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1.0)
 
-    let drawRect = NSRect(origin: .zero, size: targetSize)
-    symbolImage.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1.0)
-
-    // 深色模式使用系统高对比淡白色，浅色模式使用系统高对比深灰色
-    let tintColor = isDark
-      ? NSColor(calibratedWhite: 0.85, alpha: 1.0)
-      : NSColor(calibratedWhite: 0.17, alpha: 1.0)
-    tintColor.setFill()
-    drawRect.fill(using: .sourceAtop)
-
-    image.unlockFocus()
+      // 深色模式使用系统高对比淡白色，浅色模式使用系统高对比深灰色
+      let tintColor = isDark
+        ? NSColor(calibratedWhite: 0.85, alpha: 1.0)
+        : NSColor(calibratedWhite: 0.17, alpha: 1.0)
+      tintColor.setFill()
+      drawRect.fill(using: .sourceAtop)
+      return true
+    }
     image.isTemplate = false // 禁用 template 模式，防止系统自动二次涂色
 
     symbolCache[symbolName] = image

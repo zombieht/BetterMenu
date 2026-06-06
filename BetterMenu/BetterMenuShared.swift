@@ -331,25 +331,13 @@ let defaultSharedActions: [FinderAction] = [
 // MARK: - 公共映射函数
 
 /// 根据传入的文件类型 ID 映射并提取标准的路径扩展名。
+/// "blank" 对应空字符串（无扩展名文件），其余 ID 直接作为扩展名使用。
 func cleanExtension(for id: String) -> String {
   let cleanID =
     id.hasPrefix(BetterMenuShared.customMenuIdPrefix)
     ? String(id.dropFirst(BetterMenuShared.customMenuIdPrefix.count))
     : id
-
-  switch cleanID {
-  case "txt": return "txt"
-  case "md": return "md"
-  case "docx": return "docx"
-  case "xlsx": return "xlsx"
-  case "pptx": return "pptx"
-  case "json": return "json"
-  case "blank": return ""
-  case "py": return "py"
-  case "html": return "html"
-  case "sh": return "sh"
-  default: return cleanID
-  }
+  return cleanID == "blank" ? "" : cleanID
 }
 
 // MARK: - 统一设置读取封装

@@ -112,57 +112,54 @@ struct ExternalAppLauncher {
   }
 
   private func fallbackToNativeTerminal(directoryUrl: URL) {
-    let success = runTerminalAppleScript(path: directoryUrl.path)
-    if !success {
-      logger.warning("Terminal AppleScript failed, fallback to open command")
-      // NSWorkspace.open([directoryUrl], withApplicationAt:) 在 Terminal 未运行时
-      // 会创建两个窗口（启动默认窗口 + 打开目录窗口）。
-      // 使用 `open -a Terminal /path` 命令则始终只创建一个窗口。
-      let process = Process()
-      process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-      process.arguments = ["-a", "Terminal", directoryUrl.path]
-      do {
-        try process.run()
-      } catch {
-        logger.error("open command failed: \(error.localizedDescription, privacy: .public)")
-      }
-    }
-  }
-
-  private func runTerminalAppleScript(path: String) -> Bool {
-    // Terminal 已运行时新开 tab；未运行时复用启动后自动创建的默认窗口。
     let isRunning =
       NSRunningApplication
       .runningApplications(withBundleIdentifier: "com.apple.Terminal")
       .first != nil
 
-    let scriptText: String
     if isRunning {
-      scriptText = """
-        tell application "Terminal"
-            if (count of windows) > 0 then
-                tell front window
-                    set newTab to do script "cd " & quoted form of "\(path)"
-                end tell
-            else
-                do script "cd " & quoted form of "\(path)"
-            end if
-            activate
-        end tell
-        """
+      // Terminal 已运行时使用 AppleScript 在当前窗口新建 tab，体验更佳
+      let success = runTerminalNewTabScript(path: directoryUrl.path)
+      if !success {
+        logger.warning("Terminal AppleScript failed, fallback to open command")
+        openTerminalViaOpenCommand(directoryUrl: directoryUrl)
+      }
     } else {
-      // Terminal 未运行时，直接用 do script（不带 in 参数），
-      // 它会隐式启动 Terminal 并创建唯一的窗口来执行命令。
-      // 不能先 activate，否则 Terminal 会先创建默认窗口，
-      // do script 再创建一个窗口，导致出现两个终端。
-      scriptText = """
-        tell application "Terminal"
-            do script "cd " & quoted form of "\(path)"
-            activate
-        end tell
-        """
+      // Terminal 未运行时，直接使用 `open -a Terminal /path` 命令启动。
+      // 不走 AppleScript 是因为 `tell application "Terminal"` 会隐式启动 Terminal
+      // 并创建默认窗口，随后 `do script` 又可能创建第二个窗口，时序不稳定导致偶发两个终端。
+      // `open -a Terminal /path` 始终只创建一个窗口，行为确定可靠。
+      openTerminalViaOpenCommand(directoryUrl: directoryUrl)
     }
+  }
+
+  /// Terminal 已运行时，通过 AppleScript 在前台窗口新建 tab 并 cd 到目标路径。
+  private func runTerminalNewTabScript(path: String) -> Bool {
+    let scriptText = """
+      tell application "Terminal"
+          if (count of windows) > 0 then
+              tell front window
+                  set newTab to do script "cd " & quoted form of "\(path)"
+              end tell
+          else
+              do script "cd " & quoted form of "\(path)"
+          end if
+          activate
+      end tell
+      """
     return runAppleScript(scriptText)
+  }
+
+  /// 使用 `open -a Terminal /path` 命令打开终端，始终只创建一个窗口。
+  private func openTerminalViaOpenCommand(directoryUrl: URL) {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+    process.arguments = ["-a", "Terminal", directoryUrl.path]
+    do {
+      try process.run()
+    } catch {
+      logger.error("open command failed: \(error.localizedDescription, privacy: .public)")
+    }
   }
 
   @discardableResult
@@ -204,7 +201,7 @@ struct ExternalAppLauncher {
         return
       }
       DispatchQueue.main.async {
-        runningApplication?.activate(options: [.activateAllWindows])
+        runningApplication?.activate()
       }
     }
   }

@@ -36,7 +36,9 @@ final class SettingsMonitor: @unchecked Sendable {
   }
 
   /// 获取最新的偏好设置快照，如果缓存有效直接返回，否则重新读取。
+  /// 使用 double-checked locking 确保多线程下只采纳一次加载结果。
   func getCurrentSnapshot() -> SettingsSnapshot {
+    // 快速路径：检查缓存
     stateLock.lock()
     if let cached = state.cachedSnapshot {
       stateLock.unlock()
@@ -44,10 +46,27 @@ final class SettingsMonitor: @unchecked Sendable {
     }
     stateLock.unlock()
 
+    // 慢速路径：加载配置
+    let snapshot = loadSnapshot()
+
+    // 在锁内二次检查：另一线程可能已抢先完成加载
+    stateLock.lock()
+    if let cached = state.cachedSnapshot {
+      stateLock.unlock()
+      return cached
+    }
+    state.cachedSnapshot = snapshot
+    stateLock.unlock()
+
+    return snapshot
+  }
+
+  /// 从共享 plist 加载并组装一份完整的偏好设置快照。
+  private func loadSnapshot() -> SettingsSnapshot {
     let shared = readSharedSettings()
 
-    // 默认启用列表与主程序对齐
-    let defaultEnabledFileTypeIds: Set<String> = ["txt", "md", "docx", "xlsx", "pptx", "blank"]
+    // 默认启用列表从共享定义中动态计算，确保与主程序保持一致
+    let defaultEnabledFileTypeIds = Set(BetterMenuShared.supportedFileTypes.filter(\.enabledByDefault).map(\.id))
     let enabledIds = Set(shared.enabledFileTypes ?? UserDefaults.standard.stringArray(forKey: BetterMenuShared.enabledFileTypesKey) ?? Array(defaultEnabledFileTypeIds))
     let customExts = shared.customExtensions ?? UserDefaults.standard.stringArray(forKey: BetterMenuShared.customExtensionsKey) ?? []
 
@@ -69,18 +88,12 @@ final class SettingsMonitor: @unchecked Sendable {
       finalActions = acts
     }
 
-    let snapshot = SettingsSnapshot(
+    return SettingsSnapshot(
       enabledFileTypes: enabledIds,
       customExtensions: customExts,
       menuOrder: shared.menuOrder,
       actions: finalActions
     )
-
-    stateLock.lock()
-    state.cachedSnapshot = snapshot
-    stateLock.unlock()
-
-    return snapshot
   }
 
   /// 开始监控偏好设置所在的目录变化
