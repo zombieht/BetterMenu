@@ -53,7 +53,6 @@ enum BetterMenuShared {
 
   // MARK: - 支持的第三方编辑器信息
 
-  /// 表示支持的第三方编辑器的元数据。
   struct EditorAppInfo: Identifiable, Codable, Hashable, Sendable {
     var id: String { idString }
     let idString: String
@@ -61,13 +60,28 @@ enum BetterMenuShared {
     let title: String
     let bundleIds: [String]
     let iconName: String
+    let cliRelativePath: String?
+    let cliArgs: [String]?
+    let forceDirectoryOpen: Bool
 
-    init(id: String, name: String, title: String, bundleIds: [String], iconName: String) {
+    init(
+      id: String,
+      name: String,
+      title: String,
+      bundleIds: [String],
+      iconName: String,
+      cliRelativePath: String? = nil,
+      cliArgs: [String]? = nil,
+      forceDirectoryOpen: Bool = false
+    ) {
       self.idString = id
       self.name = name
       self.title = title
       self.bundleIds = bundleIds
       self.iconName = iconName
+      self.cliRelativePath = cliRelativePath
+      self.cliArgs = cliArgs
+      self.forceDirectoryOpen = forceDirectoryOpen
     }
   }
 
@@ -148,7 +162,10 @@ enum BetterMenuShared {
       name: "Codex",
       title: "在 Codex 中打开",
       bundleIds: ["com.openai.codex"],
-      iconName: "sparkles"
+      iconName: "sparkles",
+      cliRelativePath: "Contents/Resources/codex",
+      cliArgs: ["app"],
+      forceDirectoryOpen: true
     ),
   ]
 

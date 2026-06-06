@@ -481,7 +481,13 @@ final class BetterMenuSettingsModel: ObservableObject {
   func openInEditor(actionId: String, atPath path: String) {
     if let editor = BetterMenuShared.supportedEditors.first(where: { $0.idString == actionId }) {
       makeExternalAppLauncher().openInApplication(
-        atPath: path, bundleIdentifiers: editor.bundleIds, appName: editor.name)
+        atPath: path,
+        bundleIdentifiers: editor.bundleIds,
+        appName: editor.name,
+        cliRelativePath: editor.cliRelativePath,
+        cliArgs: editor.cliArgs,
+        forceDirectoryOpen: editor.forceDirectoryOpen
+      )
     } else {
       // 检查 actionId 是否是已安装应用程序的 Bundle ID
       if let appUrl = NSWorkspace.shared.urlForApplication(withBundleIdentifier: actionId) {

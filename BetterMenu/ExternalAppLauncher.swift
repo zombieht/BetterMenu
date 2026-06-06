@@ -30,7 +30,14 @@ struct ExternalAppLauncher {
   }
 
   /// 在指定的应用程序中打开目标路径（支持文件和目录）。
-  func openInApplication(atPath path: String, bundleIdentifiers: [String], appName: String) {
+  func openInApplication(
+    atPath path: String,
+    bundleIdentifiers: [String],
+    appName: String,
+    cliRelativePath: String? = nil,
+    cliArgs: [String]? = nil,
+    forceDirectoryOpen: Bool = false
+  ) {
     var isDirectory: ObjCBool = false
     guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
       logger.error(
@@ -38,7 +45,18 @@ struct ExternalAppLauncher {
       return
     }
 
-    let targetUrl = URL(fileURLWithPath: path, isDirectory: isDirectory.boolValue)
+    // 计算实际要打开的路径和 URL。若指定了强制以目录打开，且当前目标是个文件，则定位到其父目录。
+    let resolvedPath: String
+    let resolvedIsDirectory: Bool
+    if forceDirectoryOpen && !isDirectory.boolValue {
+      resolvedPath = URL(fileURLWithPath: path).deletingLastPathComponent().path
+      resolvedIsDirectory = true
+    } else {
+      resolvedPath = path
+      resolvedIsDirectory = isDirectory.boolValue
+    }
+
+    let targetUrl = URL(fileURLWithPath: resolvedPath, isDirectory: resolvedIsDirectory)
 
     var appUrl: URL? = nil
     var usedBundleId: String? = nil
@@ -50,11 +68,38 @@ struct ExternalAppLauncher {
       }
     }
 
-    if appUrl != nil, let bundleId = usedBundleId {
+    if let appUrl = appUrl, let bundleId = usedBundleId {
+      // 如果指定了 CLI 并且 CLI 文件确实存在，则优先使用 CLI 工具启动
+      if let cliRelPath = cliRelativePath {
+        let cliUrl = appUrl.appendingPathComponent(cliRelPath)
+        if FileManager.default.fileExists(atPath: cliUrl.path) {
+          let args = cliArgs ?? []
+          if openUsingCli(cliUrl: cliUrl, args: args, targetPath: resolvedPath) {
+            return
+          }
+        }
+      }
+
+      // 如果未配置 CLI 或 CLI 执行失败，退回到 NSWorkspace 原生方式
       openDirectoryUsingWorkspace(targetUrl, bundleIdentifier: bundleId)
     } else {
       logger.warning("\(appName, privacy: .public) is not installed on this machine")
       missingApplicationHandler(appName)
+    }
+  }
+
+  /// 使用命令行工具直接启动并打开目标路径。
+  private func openUsingCli(cliUrl: URL, args: [String], targetPath: String) -> Bool {
+    let process = Process()
+    process.executableURL = cliUrl
+    process.arguments = args + [targetPath]
+
+    do {
+      try process.run()
+      return true
+    } catch {
+      logger.error("Failed to launch application via CLI at \(cliUrl.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+      return false
     }
   }
 
