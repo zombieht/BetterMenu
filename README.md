@@ -12,7 +12,6 @@
   <img src="https://img.shields.io/badge/Platform-macOS%2015.0%2B-555555?logo=apple&logoColor=white" alt="Platform: macOS 15.0+" />
   <img src="https://img.shields.io/badge/Language-Swift%206.0-F05138?logo=swift&logoColor=white" alt="Language: Swift 6.0" />
   <img src="https://img.shields.io/badge/License-MIT-4CAF00" alt="License: MIT" />
-  <a href="https://github.com/zombieht/BetterMenu/releases"><img src="https://img.shields.io/github/downloads/zombieht/BetterMenu/total.svg" alt="Downloads" /></a>
 </p>
 
 ---
