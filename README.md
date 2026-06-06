@@ -34,7 +34,7 @@
   - 支持快捷新建 `txt`、`md`、`docx`、`xlsx`、`pptx`、`py`、`html`、`sh` 等文件。
   - 支持自定义新建文件的后缀扩展名，灵活扩展。
 - 💻 **快速在终端/编辑器中打开**：
-  - 支持系统自带终端（Terminal）。
+  - 支持常用终端一键拉起：系统自带 **Terminal**、**iTerm2**、**Ghostty**、**cmux**、**Warp**、**WezTerm**、**Alacritty**、**Hyper**、**Kitty**。
   - 支持主流代码编辑器一键拉起：**VS Code**、**Cursor**、**OpenAI Codex**、**Xcode**、**Sublime Text**、**IntelliJ IDEA**、**WebStorm**、**PyCharm**、**Android Studio**、**CotEditor**。
 - 📋 **一键复制路径**：
   - 快速复制当前访达目录或选中文件的绝对路径。
@@ -121,6 +121,10 @@ xattr -cr /Applications/BetterMenu.app
 ---
 
 ## 📝 更新日志
+
+### v2.0.6 (2026-06-06)
+- **功能增强**：全面支持第三方终端一键拉起，包括 **iTerm2**、**Ghostty**、**cmux**、**Warp**、**WezTerm**、**Alacritty**、**Hyper**、**Kitty**。
+- **缓存优化**：优化应用启动加载顺序，修复由于图标加载可能导致的启动卡顿问题。
 
 ### v2.0.5 (2026-06-06)
 - **UI 优化**：修复设置页面右侧滚动条外侧异常白边问题，使 GlassBackground 毛玻璃背景完美贴合窗口边缘。
