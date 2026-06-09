@@ -108,6 +108,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private var shouldSuppressInitialWindow = false
   var updaterController: SPUStandardUpdaterController?
 
+  /// 检测应用是否作为登录自启动项拉起
+  private var isLaunchedAsLoginItem: Bool {
+    guard let event = NSAppleEventManager.shared().currentAppleEvent else {
+      return false
+    }
+    return event.eventID == kAEOpenApplication &&
+           event.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+  }
+
   override init() {
     super.init()
     AppDelegate.shared = self
@@ -123,6 +132,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       self?.applyDisplayMode(mode)
     }
     applyDisplayMode(settingsModel.displayMode)
+
+    if isLaunchedAsLoginItem {
+      logger.info("Detected application launch as login item. Suppressing initial window.")
+      shouldSuppressInitialWindow = true
+    }
+
     scheduleInitialWindowPresentation()
   }
 
