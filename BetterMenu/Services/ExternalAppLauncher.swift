@@ -190,7 +190,7 @@ struct ExternalAppLauncher {
 
     // 完成回调在后台队列 (com.apple.launchservices.open-queue) 执行，
     // 不能直接访问 @MainActor 隔离成员，需用 @Sendable 标记并手动派发回主线程。
-    nonisolated(unsafe) let log = logger
+    let log = self.logger
     NSWorkspace.shared.open([directoryUrl], withApplicationAt: appUrl, configuration: configuration)
     { @Sendable runningApplication, error in
       if let error = error {

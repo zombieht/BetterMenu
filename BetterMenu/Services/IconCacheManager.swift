@@ -1,8 +1,10 @@
 import Cocoa
 import UniformTypeIdentifiers
+import os
 
 /// 负责在后台异步预热文件类型图标及外部应用程序图标，并将渲染好的 Retina PNG 数据序列化写入磁盘缓存。
 enum IconCacheManager {
+  private static let logger = Logger(subsystem: "com.zombie.BetterMenu", category: "IconCacheManager")
   /// 执行图标的异步预热与磁盘缓存写入
   /// - Parameters:
   ///   - fileTypes: 当前配置的全部内置文件类型定义
@@ -80,7 +82,7 @@ enum IconCacheManager {
         )
         try data.write(to: cacheUrl, options: .atomic)
       } catch {
-        // 缓存写入失败不影响正常功能
+        logger.error("Failed to write icon cache to disk: \(error.localizedDescription, privacy: .public)")
       }
     }
   }

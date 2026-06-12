@@ -64,6 +64,29 @@ let betterMenuFileTypes: [FileDefinition] = BetterMenuShared.supportedFileTypes
 
 // MARK: - ViewModel
 
+/// 线程安全的通知监听器容器包装，用于规避 Swift 6 deinit 非隔离上下文下的并发警告
+final class NotificationObserversBox: @unchecked Sendable {
+  private let lock = NSLock()
+  private var observers: [NSObjectProtocol] = []
+
+  func append(_ observer: NSObjectProtocol) {
+    lock.lock()
+    defer { lock.unlock() }
+    observers.append(observer)
+  }
+
+  func cleanUp() {
+    lock.lock()
+    let current = observers
+    observers.removeAll()
+    lock.unlock()
+
+    for observer in current {
+      NotificationCenter.default.removeObserver(observer)
+    }
+  }
+}
+
 /// 应用的设置与业务逻辑 ViewModel，负责数据读写、服务状态监控与进程通信
 @MainActor
 final class BetterMenuSettingsModel: ObservableObject {
@@ -179,7 +202,7 @@ final class BetterMenuSettingsModel: ObservableObject {
 
   let appVersion: String
   var onDisplayModeDidChange: ((BetterMenuDisplayMode) -> Void)?
-  nonisolated(unsafe) private var notificationObservers: [NSObjectProtocol] = []
+  private let notificationObservers = NotificationObserversBox()
   private var isSynchronizingLaunchAtLogin = false
   private var writeDebounceWorkItem: DispatchWorkItem?
 
@@ -270,9 +293,7 @@ final class BetterMenuSettingsModel: ObservableObject {
   }
 
   deinit {
-    for observer in notificationObservers {
-      NotificationCenter.default.removeObserver(observer)
-    }
+    notificationObservers.cleanUp()
   }
 
   // MARK: - 终端支持列表
@@ -728,7 +749,7 @@ final class BetterMenuSettingsModel: ObservableObject {
       // 异步预热图标缓存
       prewarmIconCache()
     } catch {
-      NSLog("BetterMenu shared settings write failed: \(error.localizedDescription)")
+      logger.error("BetterMenu shared settings write failed: \(error.localizedDescription, privacy: .public)")
     }
   }
 
