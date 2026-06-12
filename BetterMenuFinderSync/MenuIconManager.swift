@@ -9,9 +9,11 @@ final class MenuIconManager: @unchecked Sendable {
   private var didLoadDiskCache = false
 
   // 静态 SF Symbol 渲染缓存与锁
-  private static let symbolCacheLock = NSLock()
-  nonisolated(unsafe) private static var symbolCache: [String: NSImage] = [:]
-  nonisolated(unsafe) private static var lastAppearanceIsDark: Bool? = nil
+  private struct SymbolCacheState {
+    var symbolCache: [String: NSImage] = [:]
+    var lastAppearanceIsDark: Bool? = nil
+  }
+  private static let symbolCacheLock = OSAllocatedUnfairLock(initialState: SymbolCacheState())
 
   /// 清除全部内存缓存（在偏好设置或系统外观模式发生改变时调用）
   func clearCache() {
@@ -20,10 +22,10 @@ final class MenuIconManager: @unchecked Sendable {
     didLoadDiskCache = false
     lock.unlock()
 
-    Self.symbolCacheLock.lock()
-    Self.symbolCache.removeAll()
-    Self.lastAppearanceIsDark = nil
-    Self.symbolCacheLock.unlock()
+    Self.symbolCacheLock.withLock { state in
+      state.symbolCache.removeAll()
+      state.lastAppearanceIsDark = nil
+    }
   }
 
   /// 获取在磁盘中预热缓存的图标。若未加载，则在此处触发加载。
@@ -78,44 +80,43 @@ final class MenuIconManager: @unchecked Sendable {
   static func finderMenuSymbol(named symbolName: String, accessibilityDescription: String) -> NSImage {
     let isDark = systemUsesDarkAppearance()
 
-    symbolCacheLock.lock()
-    defer { symbolCacheLock.unlock() }
+    return symbolCacheLock.withLock { state in
+      // 动态检测系统深浅色外观变化，若发生变化清空内存缓存重新生成
+      if state.lastAppearanceIsDark != isDark {
+        state.symbolCache.removeAll()
+        state.lastAppearanceIsDark = isDark
+      }
 
-    // 动态检测系统深浅色外观变化，若发生变化清空内存缓存重新生成
-    if lastAppearanceIsDark != isDark {
-      symbolCache.removeAll()
-      lastAppearanceIsDark = isDark
+      if let cached = state.symbolCache[symbolName] {
+        return cached
+      }
+
+      let targetSize = NSSize(width: 18, height: 18)
+      guard let symbolImage = NSImage(systemSymbolName: symbolName, accessibilityDescription: accessibilityDescription)
+              ?? NSImage(systemSymbolName: "doc", accessibilityDescription: accessibilityDescription)
+      else {
+        return NSImage()
+      }
+      symbolImage.size = targetSize
+
+      // 使用 NSImage(size:flipped:drawingHandler:) 替代已弃用的 lockFocus/unlockFocus
+      let image = NSImage(size: targetSize, flipped: false) { drawRect in
+        NSGraphicsContext.current?.imageInterpolation = .high
+        symbolImage.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+
+        // 深色模式使用系统高对比淡白色，浅色模式使用系统高对比深灰色
+        let tintColor = isDark
+          ? NSColor(calibratedWhite: 0.85, alpha: 1.0)
+          : NSColor(calibratedWhite: 0.17, alpha: 1.0)
+        tintColor.setFill()
+        drawRect.fill(using: .sourceAtop)
+        return true
+      }
+      image.isTemplate = false // 禁用 template 模式，防止系统自动二次涂色
+
+      state.symbolCache[symbolName] = image
+      return image
     }
-
-    if let cached = symbolCache[symbolName] {
-      return cached
-    }
-
-    let targetSize = NSSize(width: 18, height: 18)
-    guard let symbolImage = NSImage(systemSymbolName: symbolName, accessibilityDescription: accessibilityDescription)
-            ?? NSImage(systemSymbolName: "doc", accessibilityDescription: accessibilityDescription)
-    else {
-      return NSImage()
-    }
-    symbolImage.size = targetSize
-
-    // 使用 NSImage(size:flipped:drawingHandler:) 替代已弃用的 lockFocus/unlockFocus
-    let image = NSImage(size: targetSize, flipped: false) { drawRect in
-      NSGraphicsContext.current?.imageInterpolation = .high
-      symbolImage.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1.0)
-
-      // 深色模式使用系统高对比淡白色，浅色模式使用系统高对比深灰色
-      let tintColor = isDark
-        ? NSColor(calibratedWhite: 0.85, alpha: 1.0)
-        : NSColor(calibratedWhite: 0.17, alpha: 1.0)
-      tintColor.setFill()
-      drawRect.fill(using: .sourceAtop)
-      return true
-    }
-    image.isTemplate = false // 禁用 template 模式，防止系统自动二次涂色
-
-    symbolCache[symbolName] = image
-    return image
   }
 
   /// 无 API 警告地通过系统全局 UserDefaults 快速读取系统深浅色外观状态

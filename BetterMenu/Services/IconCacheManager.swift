@@ -24,7 +24,7 @@ enum IconCacheManager {
     }
     let iconItems = builtInItems + customItems
 
-    DispatchQueue.global(qos: .utility).async {
+    Task.detached(priority: .utility) {
       let targetSize = NSSize(width: 18, height: 18)
       var dict: [String: Data] = [:]
 
