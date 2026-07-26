@@ -113,7 +113,10 @@ struct FileTypeGridItem: View {
   var body: some View {
     HStack(spacing: 8) {
       FileTypeIconView(fileTypeId: type.id)
-        .frame(width: 18, height: 18)
+        .frame(
+          width: BetterMenuShared.menuIconSize.width,
+          height: BetterMenuShared.menuIconSize.height
+        )
 
       Toggle(isOn: $isEnabled) {
         Text(type.title)
@@ -139,7 +142,7 @@ struct FileTypeIconView: View {
   let fileTypeId: String
 
   var body: some View {
-    if let image = BetterMenuIcon.icon(for: fileTypeId, size: NSSize(width: 18, height: 18)) {
+    if let image = BetterMenuIcon.icon(for: fileTypeId, size: BetterMenuShared.menuIconSize) {
       Image(nsImage: image)
         .resizable()
         .aspectRatio(contentMode: .fit)
@@ -159,7 +162,7 @@ struct CustomExtensionTag: View {
 
   var body: some View {
     HStack(spacing: 6) {
-      FileTypeIconView(fileTypeId: "custom.\(fileExtension)")
+      FileTypeIconView(fileTypeId: BetterMenuShared.customMenuId(for: fileExtension))
         .frame(width: 14, height: 14)
 
       Text(".\(fileExtension)")
@@ -265,7 +268,10 @@ struct PreviewMenuRow: View {
   var body: some View {
     HStack(spacing: 12) {
       FileTypeIconView(fileTypeId: item.id)
-        .frame(width: 18, height: 18)
+        .frame(
+          width: BetterMenuShared.menuIconSize.width,
+          height: BetterMenuShared.menuIconSize.height
+        )
 
       Text(item.title)
         .font(.callout)

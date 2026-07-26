@@ -6,11 +6,11 @@ import os
 /// 访达扩展插件主类，负责动态向 Finder 插入右键菜单
 final class FinderSync: FIFinderSync {
   private let logger = Logger(subsystem: "com.zombie.BetterMenu", category: "FinderSync")
-  
+
   // 偏好设置监控与图标管理器实例
   private let settingsMonitor = SettingsMonitor()
   private let iconManager = MenuIconManager()
-  
+
   // Tag 路由映射，每次构建菜单时更新，以保证点击回调可以找到对应数据
   private var menuDefinitionsByTag: [Int: FileDefinition] = [:]
   private var actionDefinitionsByTag: [Int: FinderAction] = [:]
@@ -24,10 +24,11 @@ final class FinderSync: FIFinderSync {
   private var menuIcon: NSImage {
     MenuIconManager.finderMenuSymbol(named: "doc.badge.plus", accessibilityDescription: "新建文件")
   }
-  
+
   /// 工具栏图标，自适应系统外观并强制单色
   private lazy var toolbarIcon: NSImage = {
-    let symbolImage = MenuIconManager.finderMenuSymbol(named: "doc.badge.plus", accessibilityDescription: "BetterMenu")
+    let symbolImage = MenuIconManager.finderMenuSymbol(
+      named: "doc.badge.plus", accessibilityDescription: "BetterMenu")
     symbolImage.isTemplate = true
     return symbolImage
   }()
@@ -75,7 +76,7 @@ final class FinderSync: FIFinderSync {
     let monitoredUrls = Self.monitoredDirectoryUrls()
     FIFinderSyncController.default().directoryURLs = Set(monitoredUrls)
     logger.info("BetterMenu Finder Sync extension loaded")
-    
+
     // 设置监控失效回调：当 settings.plist 发生改变时，自动清理图标管理器中的缓存
     settingsMonitor.onSettingsChanged = { [weak self] in
       self?.iconManager.clearCache()
@@ -123,7 +124,9 @@ final class FinderSync: FIFinderSync {
   }
 
   /// 构建“新建文件”二级菜单
-  private func makeFileCreationMenuItem(from snapshot: SettingsMonitor.SettingsSnapshot) -> NSMenuItem {
+  private func makeFileCreationMenuItem(from snapshot: SettingsMonitor.SettingsSnapshot)
+    -> NSMenuItem
+  {
     let parent = NSMenuItem(title: "新建文件", action: nil, keyEquivalent: "")
     parent.image = menuIcon
 
@@ -156,7 +159,9 @@ final class FinderSync: FIFinderSync {
   }
 
   /// 构建终端、复制路径、编辑器等一级右键快捷操作
-  private func makeEnabledShortcutItems(from snapshot: SettingsMonitor.SettingsSnapshot) -> [NSMenuItem] {
+  private func makeEnabledShortcutItems(from snapshot: SettingsMonitor.SettingsSnapshot)
+    -> [NSMenuItem]
+  {
     var nextTag = Self.dynamicActionTagBase
     return snapshot.actions.filter(\.isEnabled).compactMap { action in
       if action.id == "sendFile" {
@@ -188,7 +193,7 @@ final class FinderSync: FIFinderSync {
       )
       airDropItem.target = self
       let airDropIcon = airDropService.image
-      airDropIcon.size = NSSize(width: 18, height: 18)
+      airDropIcon.size = BetterMenuShared.menuIconSize
       airDropItem.image = airDropIcon
       submenu.addItem(airDropItem)
     }
@@ -208,7 +213,7 @@ final class FinderSync: FIFinderSync {
       item.tag = tag
 
       let volumeIcon = NSWorkspace.shared.icon(forFile: volume.url.path)
-      volumeIcon.size = NSSize(width: 18, height: 18)
+      volumeIcon.size = BetterMenuShared.menuIconSize
       item.image = volumeIcon
 
       fileTransferVolumesByTag[tag] = volume
@@ -233,7 +238,8 @@ final class FinderSync: FIFinderSync {
     item.tag = tag
     item.image =
       iconManager.getCachedIcon(for: action.id)
-      ?? MenuIconManager.finderMenuSymbol(named: action.iconName, accessibilityDescription: action.title)
+      ?? MenuIconManager.finderMenuSymbol(
+        named: action.iconName, accessibilityDescription: action.title)
     return item
   }
 
@@ -270,11 +276,15 @@ final class FinderSync: FIFinderSync {
   }
 
   /// 获取当前已启用的文件类型列表并进行排序
-  private func enabledDefinitions(with snapshot: SettingsMonitor.SettingsSnapshot) -> [FileDefinition] {
-    let builtIns = BetterMenuShared.supportedFileTypes.filter { snapshot.enabledFileTypes.contains($0.id) }
+  private func enabledDefinitions(with snapshot: SettingsMonitor.SettingsSnapshot)
+    -> [FileDefinition]
+  {
+    let builtIns = BetterMenuShared.supportedFileTypes.filter {
+      snapshot.enabledFileTypes.contains($0.id)
+    }
     let customDefinitions = snapshot.customExtensions.map { fileExtension in
       FileDefinition(
-        id: "custom.\(fileExtension)",
+        id: BetterMenuShared.customMenuId(for: fileExtension),
         title: "新建 \(fileExtension.uppercased()) 文件",
         menuTitle: "新建 \(fileExtension.uppercased()) 文件",
         baseName: "新建 \(fileExtension.uppercased()) 文件",
@@ -498,7 +508,8 @@ final class FinderSync: FIFinderSync {
 
     UNUserNotificationCenter.current().add(request) { [weak self] error in
       if let error = error {
-        self?.logger.error("Failed to post notification: \(error.localizedDescription, privacy: .public)")
+        self?.logger.error(
+          "Failed to post notification: \(error.localizedDescription, privacy: .public)")
       }
     }
   }

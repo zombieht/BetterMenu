@@ -30,10 +30,12 @@ APP_BINARY="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 APP_EXTENSION="$APP_BUNDLE/Contents/PlugIns/$EXTENSION_NAME.appex"
 
 # 命令行标志默认值
+# 默认走增量编译：日常改动只需重新编译受影响的文件，无需每次全量重建 DerivedData。
+# 需要全量重建时显式传入 --clean，或直接执行 clean 动作。
 NO_BUILD=false
 NO_RESTART_FINDER=false
-CLEAN=true
-CLEAN_CACHE=true
+CLEAN=false
+CLEAN_CACHE=false
 
 # ------------------------------------------------------------------------------
 # 2. 日志输出工具函数 (ANSI 颜色支持)
@@ -64,8 +66,8 @@ usage() {
 选项:
   -n, --no-build           跳过构建阶段 (使用已构建的 App 产物)
   -f, --no-restart-finder  跳过重启 Finder 步骤 (开发调试非扩展功能时推荐)
-  --no-clean               构建前跳过清理 DerivedData 构建缓存 (默认自动清理)
-  --no-clean-cache         构建前跳过清理 App 运行时缓存 (默认自动清理)
+  --clean                  构建前清理 DerivedData 构建缓存 (默认增量编译)
+  --clean-cache            构建前清理 App 运行时缓存 (默认保留)
   -h, --help               显示当前帮助信息
 
 动作 (默认: run):
@@ -75,6 +77,8 @@ usage() {
   logs                     启动应用程序并实时流式查看其系统日志
   telemetry                启动应用程序并过滤 subsystem == "$BUNDLE_ID" 的遥测日志
   verify                   校验应用程序运行状态以及 FinderSync 扩展激活状态
+  format                   按 .swift-format 就地格式化全部 Swift 源码 (与 CI 门禁同一规则)
+  lint                     仅检查代码风格，不修改文件 (CI 使用的校验方式)
   clean                    仅清理 DerivedData 构建缓存和 App 运行时缓存
 EOF
   exit "${1:-0}"
@@ -94,6 +98,16 @@ while [[ $# -gt 0 ]]; do
       NO_RESTART_FINDER=true
       shift
       ;;
+    --clean)
+      CLEAN=true
+      shift
+      ;;
+    --clean-cache)
+      CLEAN_CACHE=true
+      shift
+      ;;
+    # 兼容旧调用方式：此前默认全量清理，--no-clean 系列用于跳过。
+    # 现在默认已是增量编译，这两个选项等价于不做清理，保留以免既有脚本或习惯用法直接报错。
     --no-clean)
       CLEAN=false
       shift
@@ -124,7 +138,8 @@ case "$ACTION" in
   --logs) ACTION="logs" ;;
   --telemetry) ACTION="telemetry" ;;
   --verify) ACTION="verify" ;;
-  --clean) ACTION="clean" ;;
+  # 注意：这里不再接受 --clean 作为动作别名。--clean 已是上面的标志选项
+  # （表示本次构建前清理 DerivedData），要执行纯清理请使用不带横线的 clean 动作。
 esac
 
 # ------------------------------------------------------------------------------
@@ -289,8 +304,33 @@ open_app() {
 # 6. 主逻辑执行控制
 # ------------------------------------------------------------------------------
 
-# 步骤 A: 如果指定了 --clean，优先清理构建缓存；若指定了 -c 或动作为 clean，清理 App 运行缓存
-if [[ "$CLEAN" == "true" ]]; then
+# 代码风格动作不需要编译产物，先在此分流并直接结束，避免走后续的清理与构建流程。
+# swift-format 随 Xcode 提供，因此无需安装额外依赖，与 CI 使用的完全是同一份 .swift-format 规则。
+if [[ "$ACTION" == "format" || "$ACTION" == "lint" ]]; then
+  SWIFT_SOURCE_DIRS=(BetterMenu BetterMenuFinderSync BetterMenuTests)
+  cd "$ROOT_DIR"
+
+  if [[ "$ACTION" == "format" ]]; then
+    log_info "正在按 .swift-format 就地格式化 Swift 源码..."
+    xcrun swift-format format --configuration .swift-format --recursive --in-place \
+      "${SWIFT_SOURCE_DIRS[@]}"
+    log_success "代码格式化完成。"
+  else
+    log_info "正在检查 Swift 代码风格..."
+    if xcrun swift-format lint --configuration .swift-format --recursive --strict \
+      "${SWIFT_SOURCE_DIRS[@]}"; then
+      log_success "代码风格检查通过。"
+    else
+      log_error "代码风格检查未通过，可执行 '$0 format' 自动修正。"
+      exit 1
+    fi
+  fi
+  exit 0
+fi
+
+# 步骤 A: 清理阶段。默认增量编译，仅在显式传入 --clean/--clean-cache 或执行 clean 动作时清理。
+# clean 动作代表“清空全部本地状态”，因此两类缓存都要处理。
+if [[ "$CLEAN" == "true" || "$ACTION" == "clean" ]]; then
   clean_derived_data
 fi
 

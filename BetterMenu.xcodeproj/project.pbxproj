@@ -18,6 +18,9 @@
 		A10000000000000000000100 /* BetterMenuSettingsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000200 /* BetterMenuSettingsModel.swift */; };
 		A10000000000000000000101 /* BetterMenuSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000201 /* BetterMenuSettingsView.swift */; };
 		A10000000000000000000300 /* BetterMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000301 /* BetterMenuShared.swift */; };
+		A10000000000000000000742 /* BetterMenuSecureRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000741 /* BetterMenuSecureRequest.swift */; };
+		A10000000000000000000743 /* BetterMenuSecureRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000741 /* BetterMenuSecureRequest.swift */; };
+		A10000000000000000000744 /* BetterMenuSecureRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000741 /* BetterMenuSecureRequest.swift */; };
 		A10000000000000000000302 /* BetterMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000301 /* BetterMenuShared.swift */; };
 		A10000000000000000000402 /* TerminalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000400 /* TerminalApp.swift */; };
 		A10000000000000000000403 /* ExternalAppLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000401 /* ExternalAppLauncher.swift */; };
@@ -34,6 +37,7 @@
 		A10000000000000000000700 /* SettingsMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000701 /* SettingsMonitor.swift */; };
 		A10000000000000000000710 /* MenuIconManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000711 /* MenuIconManager.swift */; };
 		A10000000000000000000720 /* FileCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000721 /* FileCreator.swift */; };
+		A10000000000000000000730 /* DirectoryChangeMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000731 /* DirectoryChangeMonitor.swift */; };
 		A65100FA5752180F6B4730FB /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 529E8C462C2C9F3A67CF1C58 /* Sparkle */; };
 		A10000000000000000000093 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* InfoPlist.strings */; };
 		B20000000000000000000001 /* BetterMenuSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000012 /* BetterMenuSecurityTests.swift */; };
@@ -86,6 +90,7 @@
 		A10000000000000000000200 /* BetterMenuSettingsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuSettingsModel.swift; sourceTree = "<group>"; };
 		A10000000000000000000201 /* BetterMenuSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuSettingsView.swift; sourceTree = "<group>"; };
 		A10000000000000000000301 /* BetterMenuShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuShared.swift; sourceTree = "<group>"; };
+		A10000000000000000000741 /* BetterMenuSecureRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuSecureRequest.swift; sourceTree = "<group>"; };
 		A10000000000000000000400 /* TerminalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000401 /* ExternalAppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalAppLauncher.swift; sourceTree = "<group>"; };
 		A10000000000000000000510 /* BetterMenuGeneralSettingsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuGeneralSettingsViews.swift; sourceTree = "<group>"; };
@@ -101,6 +106,7 @@
 		A10000000000000000000701 /* SettingsMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMonitor.swift; sourceTree = "<group>"; };
 		A10000000000000000000711 /* MenuIconManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuIconManager.swift; sourceTree = "<group>"; };
 		A10000000000000000000721 /* FileCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCreator.swift; sourceTree = "<group>"; };
+		A10000000000000000000731 /* DirectoryChangeMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryChangeMonitor.swift; sourceTree = "<group>"; };
 		A10000000000000000000091 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		A10000000000000000000092 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		B20000000000000000000011 /* BetterMenuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BetterMenuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -154,6 +160,7 @@
 				A10000000000000000000902 /* Views */,
 				A10000000000000000000903 /* Services */,
 				A10000000000000000000301 /* BetterMenuShared.swift */,
+				A10000000000000000000741 /* BetterMenuSecureRequest.swift */,
 				A10000000000000000000025 /* Assets.xcassets */,
 				A10000000000000000000015 /* Info.plist */,
 				A10000000000000000000016 /* BetterMenu.entitlements */,
@@ -204,6 +211,7 @@
 				A10000000000000000000701 /* SettingsMonitor.swift */,
 				A10000000000000000000711 /* MenuIconManager.swift */,
 				A10000000000000000000721 /* FileCreator.swift */,
+				A10000000000000000000731 /* DirectoryChangeMonitor.swift */,
 				A10000000000000000000027 /* blank.docx */,
 				A10000000000000000000028 /* blank.xlsx */,
 				A10000000000000000000029 /* blank.pptx */,
@@ -396,6 +404,7 @@
 				A10000000000000000000502 /* BetterMenuPermissionAboutViews.swift in Sources */,
 				A10000000000000000000503 /* BetterMenuSettingsComponents.swift in Sources */,
 				A10000000000000000000300 /* BetterMenuShared.swift in Sources */,
+				A10000000000000000000742 /* BetterMenuSecureRequest.swift in Sources */,
 				A10000000000000000000600 /* SystemCommand.swift in Sources */,
 				A10000000000000000000610 /* IconCacheManager.swift in Sources */,
 				A10000000000000000000620 /* FileTransferService.swift in Sources */,
@@ -411,9 +420,11 @@
 			files = (
 				A10000000000000000000003 /* FinderSync.swift in Sources */,
 				A10000000000000000000302 /* BetterMenuShared.swift in Sources */,
+				A10000000000000000000743 /* BetterMenuSecureRequest.swift in Sources */,
 				A10000000000000000000700 /* SettingsMonitor.swift in Sources */,
 				A10000000000000000000710 /* MenuIconManager.swift in Sources */,
 				A10000000000000000000720 /* FileCreator.swift in Sources */,
+				A10000000000000000000730 /* DirectoryChangeMonitor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -424,6 +435,7 @@
 				B20000000000000000000001 /* BetterMenuSecurityTests.swift in Sources */,
 				B20000000000000000000002 /* BetterMenuCoreServiceTests.swift in Sources */,
 				B20000000000000000000003 /* BetterMenuShared.swift in Sources */,
+				A10000000000000000000744 /* BetterMenuSecureRequest.swift in Sources */,
 				B20000000000000000000004 /* AppleScriptPathArgument.swift in Sources */,
 				B20000000000000000000005 /* FileTransferOperations.swift in Sources */,
 				B20000000000000000000006 /* FileCreator.swift in Sources */,

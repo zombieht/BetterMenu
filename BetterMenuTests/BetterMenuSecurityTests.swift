@@ -173,6 +173,23 @@ final class BetterMenuSecurityTests: XCTestCase {
     XCTAssertEqual(migratedActions.first(where: { $0.id == "copyPath" })?.isEnabled, false)
   }
 
+  /// 自定义菜单 ID 的拼装与还原过去在四处各写一份字面量 `"custom.\(ext)"`，
+  /// 现已收拢到共享层。这里锁定两个方向互为逆运算，避免任一侧被单独改动。
+  func testCustomMenuIdRoundTripsFileExtension() {
+    for fileExtension in ["md", "swift", "tar.gz", ""] {
+      let menuId = BetterMenuShared.customMenuId(for: fileExtension)
+      XCTAssertTrue(menuId.hasPrefix(BetterMenuShared.customMenuIdPrefix))
+      XCTAssertEqual(BetterMenuShared.customExtension(fromMenuId: menuId), fileExtension)
+      XCTAssertEqual(cleanExtension(for: menuId), fileExtension)
+    }
+
+    // 内置类型 ID 不带前缀，不应被当作自定义扩展名解析。
+    XCTAssertNil(BetterMenuShared.customExtension(fromMenuId: "docx"))
+    XCTAssertEqual(cleanExtension(for: "docx"), "docx")
+    // "blank" 代表无扩展名文件。
+    XCTAssertEqual(cleanExtension(for: "blank"), "")
+  }
+
   private func makeTemporaryDirectory() throws -> URL {
     let directoryUrl = FileManager.default.temporaryDirectory
       .appendingPathComponent("BetterMenuTests-\(UUID().uuidString)", isDirectory: true)

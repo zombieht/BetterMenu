@@ -1,7 +1,7 @@
 import Cocoa
+import Sparkle
 import SwiftUI
 import os
-import Sparkle
 
 /// 状态栏菜单的 SwiftUI 视图定义
 struct BetterMenuBarView: View {
@@ -114,8 +114,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     guard let event = NSAppleEventManager.shared().currentAppleEvent else {
       return false
     }
-    return event.eventID == kAEOpenApplication &&
-           event.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+    return event.eventID == kAEOpenApplication
+      && event.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
   }
 
   override init() {
@@ -127,7 +127,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     // 初始化 Sparkle 自动更新组件
-    updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    updaterController = SPUStandardUpdaterController(
+      startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     settingsModel.onDisplayModeDidChange = { [weak self] mode in
       self?.applyDisplayMode(mode)

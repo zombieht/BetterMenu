@@ -103,10 +103,19 @@ xattr -cr /Applications/BetterMenu.app
 ./script/build_and_run.sh run
 ```
 
+该脚本默认使用增量编译，日常改动只重新编译受影响的文件。需要全量重建时追加 `--clean`，需要一并清空运行缓存时追加 `--clean-cache`；`./script/build_and_run.sh clean` 会同时清理两者。
+
 ### 仅构建并注册扩展
 如果只需重新注册 Finder Sync 扩展，可执行：
 ```bash
 ./script/build_and_run.sh register
+```
+
+### 代码风格
+提交前统一代码排版（规则见 `.swift-format`，`swift-format` 随 Xcode 提供）：
+```bash
+./script/build_and_run.sh format   # 就地格式化
+./script/build_and_run.sh lint     # 仅检查，CI 使用同一规则
 ```
 
 ### Release 打包

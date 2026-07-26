@@ -1,5 +1,5 @@
-import Foundation
 import Cocoa
+import Foundation
 
 /// 负责实际物理文件的创建、防文件名冲突算法计算以及 POSIX 执行权限设置。
 enum FileCreator {
@@ -14,7 +14,7 @@ enum FileCreator {
     /// - Returns: 返回最终成功创建的文件路径 URL
     func create() throws -> URL {
       let destination = try makeAvailableDestination()
-      
+
       try definition.contents(in: bundle).write(to: destination, options: .withoutOverwriting)
       if definition.shouldBeExecutable {
         try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destination.path)

@@ -10,9 +10,39 @@ final class FileTransferService {
     let progressWindowController: FileTransferProgressWindowController
   }
 
+  /// `NSSharingService.delegate` 是弱引用，因此需要与 service 一起被持有。
+  private struct ActiveAirDropTask {
+    let service: NSSharingService
+    let delegate: AirDropCompletionDelegate
+  }
+
+  /// 在隔空投送成功或失败后通知调用方释放对应的 service 强引用。
+  @MainActor
+  final class AirDropCompletionDelegate: NSObject, NSSharingServiceDelegate {
+    private let onFinish: () -> Void
+
+    init(onFinish: @escaping () -> Void) {
+      self.onFinish = onFinish
+    }
+
+    func sharingService(_ sharingService: NSSharingService, didShareItems items: [Any]) {
+      onFinish()
+    }
+
+    func sharingService(
+      _ sharingService: NSSharingService,
+      didFailToShareItems items: [Any],
+      error: any Error
+    ) {
+      onFinish()
+    }
+  }
+
   private let logger = Logger(
     subsystem: "com.zombie.BetterMenu", category: "FileTransferService")
-  private var activeAirDropService: NSSharingService?
+  /// 正在进行的隔空投送。`perform(withItems:)` 是异步的，面板关闭前必须保持强引用；
+  /// 用单值保存会让第二次投送顶掉第一次的引用，因此按任务 id 分别持有，结束回调里再移除。
+  private var activeAirDropTasks: [UUID: ActiveAirDropTask] = [:]
   private var copyTasks: [UUID: ActiveCopyTask] = [:]
 
   /// 使用系统隔空投送面板发送选中的文件或文件夹。
@@ -27,7 +57,12 @@ final class FileTransferService {
       return
     }
 
-    activeAirDropService = service
+    let taskId = UUID()
+    let delegate = AirDropCompletionDelegate { [weak self] in
+      self?.activeAirDropTasks.removeValue(forKey: taskId)
+    }
+    service.delegate = delegate
+    activeAirDropTasks[taskId] = ActiveAirDropTask(service: service, delegate: delegate)
     service.perform(withItems: existingUrls)
   }
 
@@ -46,7 +81,8 @@ final class FileTransferService {
     progressModel.onCancel = { [weak self] in
       self?.cancelCopyTask(taskId)
     }
-    progressWindowController.show()
+    // 已有传输任务时把新窗口阶梯式错开，避免多个进度窗口完全重叠。
+    progressWindowController.show(cascadeIndex: copyTasks.count)
 
     let task = Task { [weak self] in
       let result = await Task.detached(priority: .userInitiated) {

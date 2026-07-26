@@ -198,6 +198,42 @@ final class BetterMenuCoreServiceTests: XCTestCase {
     )
   }
 
+  /// 统计目录体积需要枚举整棵目录树，这一阶段也必须响应取消，
+  /// 否则用户在“正在计算传输大小…”期间点取消会没有任何反应。
+  func testFileTransferCancellationDuringByteCountingCopiesNothing() throws {
+    let rootUrl = try makeTemporaryDirectory()
+    let sourceUrl = rootUrl.appendingPathComponent("Tree", isDirectory: true)
+    let destinationUrl = rootUrl.appendingPathComponent("Destination", isDirectory: true)
+    try FileManager.default.createDirectory(at: sourceUrl, withIntermediateDirectories: true)
+    try FileManager.default.createDirectory(at: destinationUrl, withIntermediateDirectories: true)
+    for index in 0..<600 {
+      try Data("x".utf8).write(to: sourceUrl.appendingPathComponent("file-\(index).txt"))
+    }
+
+    let cancellationToken = FileTransferCancellationToken()
+    cancellationToken.cancel()
+    let snapshots = LockedSnapshots()
+
+    let result = FileTransferOperations.copyItems(
+      [sourceUrl],
+      to: destinationUrl,
+      cancellationToken: cancellationToken,
+      progressHandler: { snapshot in
+        snapshots.append(snapshot)
+      }
+    )
+
+    XCTAssertTrue(result.wasCancelled)
+    XCTAssertTrue(result.copiedUrls.isEmpty)
+    XCTAssertTrue(result.failures.isEmpty)
+    XCTAssertTrue(snapshots.values.isEmpty)
+    XCTAssertFalse(
+      FileManager.default.fileExists(
+        atPath: destinationUrl.appendingPathComponent("Tree").path
+      )
+    )
+  }
+
   func testFileTransferRejectsDestinationInsideSource() throws {
     let rootUrl = try makeTemporaryDirectory()
     let sourceUrl = rootUrl.appendingPathComponent("Source", isDirectory: true)
@@ -209,6 +245,59 @@ final class BetterMenuCoreServiceTests: XCTestCase {
     XCTAssertFalse(result.wasCancelled)
     XCTAssertTrue(result.copiedUrls.isEmpty)
     XCTAssertEqual(result.failures.count, 1)
+  }
+
+  /// 失败项目也已处理完毕，必须计入进度分子，否则分母含全部项目、
+  /// 分子只含成功项，部分失败时进度条会永远停在中途、无法到达 100%。
+  func testFileTransferPartialFailureStillCompletesProgress() throws {
+    let rootUrl = try makeTemporaryDirectory()
+    let destinationUrl = rootUrl.appendingPathComponent("Destination", isDirectory: true)
+    try FileManager.default.createDirectory(at: destinationUrl, withIntermediateDirectories: true)
+
+    // 第一项可以正常复制；第二项是把目录复制进它自己内部，一定失败。
+    let copyableUrl = rootUrl.appendingPathComponent("copyable.txt")
+    try Data(repeating: 0x41, count: 2048).write(to: copyableUrl)
+    let failingSourceUrl = destinationUrl.deletingLastPathComponent()
+
+    let snapshots = LockedSnapshots()
+    let result = FileTransferOperations.copyItems(
+      [copyableUrl, failingSourceUrl],
+      to: destinationUrl,
+      progressHandler: { snapshot in
+        snapshots.append(snapshot)
+      }
+    )
+
+    XCTAssertFalse(result.wasCancelled)
+    XCTAssertEqual(result.copiedUrls.count, 1)
+    XCTAssertEqual(result.failures.count, 1)
+
+    let finalSnapshot = try XCTUnwrap(snapshots.values.last)
+    XCTAssertEqual(finalSnapshot.completedItemCount, finalSnapshot.totalItemCount)
+    XCTAssertEqual(finalSnapshot.completedItemCount, 2)
+    XCTAssertEqual(finalSnapshot.completedBytes, finalSnapshot.totalBytes)
+  }
+
+  /// 复制失败提示必须是中文。此前直接返回 `strerror` 的英文文案，
+  /// 在全中文界面里会出现 "No space left on device" 之类的混排。
+  func testFileTransferErrorMessagesAreLocalized() {
+    let localizedErrorNumbers: [Int32] = [
+      ENOSPC, EACCES, EPERM, EEXIST, EROFS, EIO, ENOENT, EDQUOT, EFBIG, ENAMETOOLONG, ENOTDIR,
+      ENOMEM,
+    ]
+    for errorNumber in localizedErrorNumbers {
+      let message = FileTransferOperations.errorMessage(for: errorNumber)
+      XCTAssertFalse(message.isEmpty, "errno \(errorNumber) 缺少提示文案")
+      XCTAssertTrue(
+        message.contains(where: { $0.unicodeScalars.contains { $0.value > 0x7F } }),
+        "errno \(errorNumber) 的提示应为中文，实际为：\(message)"
+      )
+    }
+
+    // 未单独映射的错误码回落到系统描述，但仍需带上错误码便于排查。
+    let fallbackMessage = FileTransferOperations.errorMessage(for: EPIPE)
+    XCTAssertTrue(fallbackMessage.contains("\(EPIPE)"))
+    XCTAssertTrue(fallbackMessage.hasPrefix("复制失败"))
   }
 
   private func makeTemporaryDirectory() throws -> URL {

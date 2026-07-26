@@ -132,15 +132,47 @@ enum FileTransferOperations {
     let fileManager = FileManager()
     let destinationUrl = requestedDestinationUrl.standardizedFileURL
     let standardizedSourceUrls = sourceUrls.map(\.standardizedFileURL)
-    let sourceByteCounts = standardizedSourceUrls.map {
-      byteCount(for: $0, fileManager: fileManager)
+    let totalItemCount = standardizedSourceUrls.count
+
+    // 统计体积需要完整枚举目录树，包含数万文件的目录会耗时很久，
+    // 因此这一阶段也必须响应取消，否则进度窗口会长时间停在“正在计算传输大小…”且点取消无反应。
+    var sourceByteCounts: [Int64] = []
+    sourceByteCounts.reserveCapacity(totalItemCount)
+    for sourceUrl in standardizedSourceUrls {
+      guard !cancellationToken.isCancelled else {
+        return FileTransferCopyResult(copiedUrls: [], failures: [], wasCancelled: true)
+      }
+      sourceByteCounts.append(
+        byteCount(
+          for: sourceUrl,
+          fileManager: fileManager,
+          cancellationToken: cancellationToken
+        )
+      )
+    }
+    guard !cancellationToken.isCancelled else {
+      return FileTransferCopyResult(copiedUrls: [], failures: [], wasCancelled: true)
     }
     let totalBytes = sourceByteCounts.reduce(0, +)
-    let totalItemCount = standardizedSourceUrls.count
 
     var copiedUrls: [URL] = []
     var failures: [FileTransferCopyFailure] = []
     var completedBytes: Int64 = 0
+
+    // 无论成功还是失败，项目都已处理完毕，因此进度的分子必须一并推进。
+    // 否则分母含全部项目、分子只含成功项，部分失败时进度条会永远停在中途。
+    func finishItem(at index: Int, fileName: String) {
+      completedBytes += sourceByteCounts[index]
+      progressHandler(
+        FileTransferProgressSnapshot(
+          currentFileName: fileName,
+          completedBytes: min(completedBytes, totalBytes),
+          totalBytes: totalBytes,
+          completedItemCount: index + 1,
+          totalItemCount: totalItemCount
+        )
+      )
+    }
 
     for (index, sourceUrl) in standardizedSourceUrls.enumerated() {
       guard !cancellationToken.isCancelled else {
@@ -158,6 +190,7 @@ enum FileTransferOperations {
             message: "不能将项目复制到其自身内部。"
           )
         )
+        finishItem(at: index, fileName: sourceUrl.lastPathComponent)
         continue
       }
 
@@ -192,16 +225,7 @@ enum FileTransferOperations {
       )
       if copyErrorNumber == 0 {
         copiedUrls.append(targetUrl)
-        completedBytes += sourceByteCounts[index]
-        progressHandler(
-          FileTransferProgressSnapshot(
-            currentFileName: sourceUrl.lastPathComponent,
-            completedBytes: min(completedBytes, totalBytes),
-            totalBytes: totalBytes,
-            completedItemCount: index + 1,
-            totalItemCount: totalItemCount
-          )
-        )
+        finishItem(at: index, fileName: sourceUrl.lastPathComponent)
         continue
       }
 
@@ -224,6 +248,7 @@ enum FileTransferOperations {
           message: errorMessage(for: copyErrorNumber)
         )
       )
+      finishItem(at: index, fileName: sourceUrl.lastPathComponent)
     }
 
     return FileTransferCopyResult(
@@ -346,9 +371,12 @@ enum FileTransferOperations {
     return destinationPath == sourcePath || destinationPath.hasPrefix(sourcePath + "/")
   }
 
+  /// 统计单个项目的字节数。目录会被递归枚举，枚举过程中定期检查取消标记，
+  /// 一旦取消立即返回已累计的数值（调用方会据此终止整个任务，该数值不会被使用）。
   private static func byteCount(
     for sourceUrl: URL,
-    fileManager: FileManager
+    fileManager: FileManager,
+    cancellationToken: FileTransferCancellationToken
   ) -> Int64 {
     let resourceKeys: Set<URLResourceKey> = [
       .fileSizeKey,
@@ -376,7 +404,13 @@ enum FileTransferOperations {
       errorHandler: { _, _ in true }
     )
     var totalBytes: Int64 = 0
+    var visitedItemCount = 0
     while let itemUrl = enumerator?.nextObject() as? URL {
+      // 取消标记的读取会加锁，按批检查以免在大目录上带来额外开销。
+      visitedItemCount += 1
+      if visitedItemCount % 256 == 0, cancellationToken.isCancelled {
+        return totalBytes
+      }
       guard
         let values = try? itemUrl.resourceValues(forKeys: resourceKeys),
         values.isRegularFile == true
@@ -388,10 +422,39 @@ enum FileTransferOperations {
     return totalBytes
   }
 
-  private static func errorMessage(for errorNumber: Int32) -> String {
-    guard let message = strerror(errorNumber) else {
-      return "复制失败，错误码 \(errorNumber)。"
+  /// 把复制失败的 errno 翻译成中文提示。
+  ///
+  /// `strerror` 只返回英文（"No space left on device" 等），在全中文界面里很突兀，
+  /// 因此常见错误单独给出可操作的中文说明；其余错误回落到系统描述并附带错误码便于排查。
+  static func errorMessage(for errorNumber: Int32) -> String {
+    switch errorNumber {
+    case ENOSPC:
+      return "目标磁盘空间不足。"
+    case EACCES, EPERM:
+      return "没有写入目标位置的权限。"
+    case EEXIST:
+      return "目标位置已存在同名项目。"
+    case EROFS:
+      return "目标磁盘为只读，无法写入。"
+    case EIO:
+      return "读写磁盘时发生输入输出错误，设备可能已断开或损坏。"
+    case ENOENT:
+      return "源项目或目标位置已不存在。"
+    case EDQUOT:
+      return "已超出目标磁盘的配额限制。"
+    case EFBIG:
+      return "文件体积超出目标磁盘文件系统的上限。"
+    case ENAMETOOLONG:
+      return "文件路径过长，目标文件系统无法接受。"
+    case ENOTDIR:
+      return "目标位置不是文件夹。"
+    case ENOMEM:
+      return "可用内存不足，无法完成复制。"
+    default:
+      guard let message = strerror(errorNumber) else {
+        return "复制失败，错误码 \(errorNumber)。"
+      }
+      return "复制失败：\(String(cString: message))（错误码 \(errorNumber)）。"
     }
-    return String(cString: message)
   }
 }

@@ -17,6 +17,7 @@ BetterMenu/
   AppDelegate.swift              # 主应用生命周期、窗口和 URL Scheme 路由
   main.swift                     # 主应用入口点
   BetterMenuShared.swift         # 共享核心：统一 FileDefinition、全局 constants 与公共映射函数
+  BetterMenuSecureRequest.swift  # 一次性安全请求的数据模型、原子写入、校验与消费（三 Target 共享的安全边界）
   Models/
     BetterMenuSettingsModel.swift  # 设置页 UI 状态绑定与业务分发
   Views/
@@ -37,8 +38,9 @@ BetterMenu/
 
 BetterMenuFinderSync/
   FinderSync.swift               # Finder Sync 扩展入口、上下文交互与菜单组装（极简 Controller）
-  SettingsMonitor.swift          # 共享偏好 plist 文件的加载、只读配置快照维护与 DispatchSource 监听
+  SettingsMonitor.swift          # 共享偏好 plist 文件的加载、只读配置快照维护与变更作废
   MenuIconManager.swift          # 磁盘缓存图标加载、SF Symbol 深浅色重绘与内存渲染二级缓存
+  DirectoryChangeMonitor.swift   # 目录级 DispatchSource 监听封装，供设置与图标缓存复用
   FileCreator.swift              # 物理文件落盘、防文件名冲突算法计算与可执行权限设置
   Resources/Templates/           # Word/Excel/PPTX 内置空白二进制模板文件
 
@@ -54,7 +56,7 @@ BetterMenuTests/
 - **图标缓存路径**：`~/Library/Caches/BetterMenu/icon_cache.plist`
 - **一次性请求目录**：`~/Library/Application Support/BetterMenu/Requests/`
 
-共享数据模型 `FileDefinition`、`FinderAction` 和键名统一在 `BetterMenuShared.swift` 中管理。新增需要两个 Target 同时读取的数据定义时，必须直接归入共享层。
+共享数据模型 `FileDefinition`、`FinderAction` 和键名统一在 `BetterMenuShared.swift` 中管理。新增需要两个 Target 同时读取的数据定义时，必须直接归入共享层，禁止在调用方重复定义常量或硬编码字面量。自定义菜单 ID 只能通过 `BetterMenuShared.customMenuId(for:)` 与 `customExtension(fromMenuId:)` 构造与解析，菜单图标尺寸统一取 `BetterMenuShared.menuIconSize`（图标缓存按此尺寸预渲染，两侧取值不一致会导致缓存图标被系统再次缩放而模糊）。
 
 ### Finder 扩展安全请求机制
 
@@ -62,14 +64,17 @@ Finder 扩展不得通过 URL Scheme 直接传递动作 ID、源文件路径或�
 
 主应用消费请求前会验证请求目录与文件所有者、POSIX 权限、文件类型、大小、协议版本、路径格式和 30 秒有效期。请求文件在读取时立即从目录移除，防止重放。旧版 `run-action`、`send-files` 和 `open-terminal` 明文参数路由不再接受。
 
+该机制的数据模型与实现集中在 `BetterMenu/BetterMenuSecureRequest.swift`，与其余共享定义分离，便于单独审查这条安全边界。
+
 ### 结构维护规范
 
 - **主应用入口保持轻量**：`AppDelegate` 仅处理生命周期分发、AppKit 激活策略以及 URL Scheme 路由。
 - **ViewModel 高度内聚**：`BetterMenuSettingsModel` 只做数据和 UI 绑定，底层任务（如图标预热、System 进程命令）一律剥离成独立业务服务（如 `IconCacheManager`，`SystemCommand`）。
-- **FinderSync 扩展轻量化**：`FinderSync` 类仅扮演控制器角色。偏好读取与目录监听由 `SettingsMonitor` 托管，图标解析与渲染由 `MenuIconManager` 托管，文件生成由 `FileCreator` 托管。
-- **文件发送链路**：FinderSync 只负责读取当前选择、发现已挂载可写卷并构造菜单；隔空投送与文件复制通过 URL Scheme 交给主应用的 `FileTransferService` 执行，避免大文件任务依赖扩展进程生命周期。`FileTransferOperations` 使用系统 `copyfile` 回调提供字节进度和复制中取消，复制目标仅允许已挂载的非内部可写卷，发生重名时生成递增后缀，取消或失败时清理未完成项目，任务完成后由访达定位结果。
+- **FinderSync 扩展轻量化**：`FinderSync` 类仅扮演控制器角色。偏好读取由 `SettingsMonitor` 托管，图标解析与渲染由 `MenuIconManager` 托管，文件生成由 `FileCreator` 托管。两者的目录监听统一复用 `DirectoryChangeMonitor`：主应用是先同步写 `settings.plist`、再异步预热 `icon_cache.plist`，因此设置目录与缓存目录必须各自独立监听，否则扩展会在新图标落盘前就重新加载缓存，菜单里持续显示 SF Symbol 占位图。共享文件均为原子写（临时文件 + rename），监听对象只能是父目录而非文件本身。
+- **文件发送链路**：FinderSync 只负责读取当前选择、发现已挂载可写卷并构造菜单；隔空投送与文件复制通过 URL Scheme 交给主应用的 `FileTransferService` 执行，避免大文件任务依赖扩展进程生命周期。`FileTransferOperations` 使用系统 `copyfile` 回调提供字节进度和复制中取消，复制目标仅允许已挂载的非内部可写卷，发生重名时生成递增后缀，取消或失败时清理未完成项目，任务完成后由访达定位结果。统计目录体积同样必须响应取消（大目录枚举耗时很久），失败项目也要计入进度分子（否则部分失败时进度条永远到不了 100%），失败原因需经 `errorMessage(for:)` 转成中文。传输任务支持并发：`FileTransferService` 按任务 id 分别持有隔空投送的 `NSSharingService` 与其 delegate（面板异步关闭前不能提前释放），进度窗口按 `show(cascadeIndex:)` 阶梯错开。复制任务由扩展以 `activates: false` 唤起，进度窗口只能 `orderFrontRegardless()`，不得调用 `NSApp.activate()` 抢占前台。
 - **Swift 6 Concurrency 并发安全**：编写异步或跨 Target 通信的工具类时，必须按照 Swift 6 安全规范进行严格类型隔离，或使用锁机制辅以 `nonisolated(unsafe)` 消除编译警告。
 - **Xcode 项目同步**：新增 Swift 源文件后，必须同步注册在 `BetterMenu.xcodeproj/project.pbxproj` 对应的 Target 编译阶段。
+- **代码风格由 `swift-format` 门禁**：规则见仓库根目录 `.swift-format`（2 空格缩进、100 列、导入按字典序）。`swift-format` 随 Xcode 提供，无需额外安装依赖。提交前执行 `./script/build_and_run.sh format` 自动修正，或用 `lint` 动作只做检查；CI 会以 `--strict` 校验，任何风格告警都会让流水线失败。
 - **文档维护**：更改项目行为、扩展逻辑或业务边界时，必须同步修改本指南及 `README.md`。
 
 ---
@@ -89,9 +94,11 @@ xcodebuild \
 
 `BetterMenuTests` 是无宿主单元测试 Target。共享 Scheme 在测试动作中只构建测试 Target，不构建或注册 `BetterMenu.app` 与 Finder Sync 扩展。不要重新启用主 App 或扩展的 `buildForTesting`，否则本地测试产物会出现在“登录项与扩展”中。
 
-构建主 App 或 Finder Sync 扩展时必须固定复用项目 `DerivedData` 或 Xcode 默认路径中的一种，不得混用或为同一工作区创建多个临时 DerivedData 路径。`build_and_run.sh clean` 会在清理构建产物前注销开发扩展，`package.sh` 会在打包结束后注销临时 Release 产物。
+构建主 App 或 Finder Sync 扩展时必须固定复用项目 `DerivedData` 或 Xcode 默认路径中的一种，不得混用或为同一工作区创建多个临时 DerivedData 路径。`build_and_run.sh` 默认增量编译以复用该 `DerivedData`，需要全量重建时显式传入 `--clean`（`--clean-cache` 另行清空运行缓存）。`build_and_run.sh clean` 会在清理构建产物前注销开发扩展，`package.sh` 会在打包结束后注销临时 Release 产物。
 
-GitHub Actions 会在打包前执行同一组测试，并检查测试产物中没有 `BetterMenu.app` 或 `BetterMenuFinderSync.appex`，防止 Scheme 配置回退。安全通信或 AppleScript 路径处理发生变化时，必须同步补充 `BetterMenuSecurityTests`；文件创建、复制、进度或取消逻辑发生变化时，必须同步补充 `BetterMenuCoreServiceTests`。
+GitHub Actions 会在打包前执行代码风格检查与同一组测试，并检查测试产物中没有 `BetterMenu.app` 或 `BetterMenuFinderSync.appex`，防止 Scheme 配置回退。安全通信或 AppleScript 路径处理发生变化时，必须同步补充 `BetterMenuSecurityTests`；文件创建、复制、进度或取消逻辑发生变化时，必须同步补充 `BetterMenuCoreServiceTests`。
+
+测试结果会以 `.xcresult` 包上传为 `BetterMenu-TestResults` 工件（无论成败），打包日志上传为 `BetterMenu-BuildLog`，均保留 14 天。排查 CI 失败时优先下载这两个工件，而不是只看日志尾部输出。
 
 
 ---

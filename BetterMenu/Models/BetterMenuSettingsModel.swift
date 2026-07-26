@@ -277,7 +277,8 @@ final class BetterMenuSettingsModel: ObservableObject {
         forKey: Self.enabledFileTypesKey) ?? defaultTypes)
     customExtensions = storedCustomExtensions
 
-    let finalDefaultOrder = defaultTypes + storedCustomExtensions.map { Self.customMenuId(for: $0) }
+    let finalDefaultOrder =
+      defaultTypes + storedCustomExtensions.map { BetterMenuShared.customMenuId(for: $0) }
     menuOrder = Self.normalizedMenuOrder(
       sharedSettings.menuOrder ?? UserDefaults.standard.stringArray(forKey: Self.menuOrderKey)
         ?? finalDefaultOrder,
@@ -311,7 +312,9 @@ final class BetterMenuSettingsModel: ObservableObject {
 
   var menuPreviewItems: [MenuPreviewItem] {
     menuOrder.compactMap { id in
-      guard enabledFileTypes.contains(id) || id.hasPrefix(Self.customMenuIdPrefix) else {
+      guard
+        enabledFileTypes.contains(id) || id.hasPrefix(BetterMenuShared.customMenuIdPrefix)
+      else {
         return nil
       }
       return menuItem(for: id)
@@ -749,7 +752,8 @@ final class BetterMenuSettingsModel: ObservableObject {
       // 异步预热图标缓存
       prewarmIconCache()
     } catch {
-      logger.error("BetterMenu shared settings write failed: \(error.localizedDescription, privacy: .public)")
+      logger.error(
+        "BetterMenu shared settings write failed: \(error.localizedDescription, privacy: .public)")
     }
   }
 
@@ -762,19 +766,13 @@ final class BetterMenuSettingsModel: ObservableObject {
     )
   }
 
-  private static let customMenuIdPrefix = "custom."
-
   private static var defaultMenuOrder: [String] {
     betterMenuFileTypes.map(\.id)
   }
 
-  private static func customMenuId(for fileExtension: String) -> String {
-    "\(customMenuIdPrefix)\(fileExtension)"
-  }
-
   private static func normalizedMenuOrder(_ order: [String], customExtensions: [String]) -> [String]
   {
-    let allIDs = defaultMenuOrder + customExtensions.map(customMenuId(for:))
+    let allIDs = defaultMenuOrder + customExtensions.map(BetterMenuShared.customMenuId(for:))
     let allowedIDs = Set(allIDs)
     let orderedKnownIDs = uniqueMenuIds(from: order.filter { allowedIDs.contains($0) })
     let missingIDs = allIDs.filter { !orderedKnownIDs.contains($0) }
@@ -803,8 +801,7 @@ final class BetterMenuSettingsModel: ObservableObject {
       return MenuPreviewItem(id: id, title: builtIn.menuTitle)
     }
 
-    guard id.hasPrefix(Self.customMenuIdPrefix) else { return nil }
-    let fileExtension = String(id.dropFirst(Self.customMenuIdPrefix.count))
+    guard let fileExtension = BetterMenuShared.customExtension(fromMenuId: id) else { return nil }
     guard customExtensions.contains(fileExtension) else { return nil }
     return MenuPreviewItem(id: id, title: "新建 \(fileExtension.uppercased()) 文件")
   }
@@ -844,4 +841,3 @@ final class BetterMenuSettingsModel: ObservableObject {
     return migrated
   }
 }
-
