@@ -54,6 +54,53 @@ final class BetterMenuCoreServiceTests: XCTestCase {
     XCTAssertEqual(permissions.intValue & 0o777, 0o755)
   }
 
+  func testDirectoryChangeMonitorRecoversAfterDirectoryRecreation() throws {
+    let rootUrl = try makeTemporaryDirectory()
+    let monitoredDirectoryUrl = rootUrl.appendingPathComponent("Monitored", isDirectory: true)
+    let markerUrl = monitoredDirectoryUrl.appendingPathComponent("icon_cache.plist")
+    try FileManager.default.createDirectory(
+      at: monitoredDirectoryUrl,
+      withIntermediateDirectories: true
+    )
+
+    let changeExpectation = expectation(description: "重新创建目录后仍能收到写入事件")
+    changeExpectation.assertForOverFulfill = false
+    let signal = DirectoryMonitorTestSignal(
+      markerUrl: markerUrl,
+      expectation: changeExpectation
+    )
+    let monitor = DirectoryChangeMonitor(
+      directoryUrl: monitoredDirectoryUrl,
+      queueLabel: "com.zombie.BetterMenuTests.directoryMonitor"
+    )
+    monitor.start {
+      signal.handleChange()
+    }
+    defer {
+      monitor.stop()
+    }
+
+    try FileManager.default.removeItem(at: monitoredDirectoryUrl)
+    DispatchQueue.global(qos: .utility).async {
+      for attempt in 0..<10 where !signal.isComplete {
+        do {
+          try FileManager.default.createDirectory(
+            at: monitoredDirectoryUrl,
+            withIntermediateDirectories: true
+          )
+          try Data("updated-\(attempt)".utf8).write(to: markerUrl, options: .atomic)
+        } catch {
+          signal.handleFailure(error)
+          return
+        }
+        Thread.sleep(forTimeInterval: 0.2)
+      }
+    }
+
+    wait(for: [changeExpectation], timeout: 3)
+    XCTAssertNil(signal.failureMessage)
+  }
+
   func testFileTransferCopiesFileAndReportsProgress() throws {
     let rootUrl = try makeTemporaryDirectory()
     let sourceDirectoryUrl = rootUrl.appendingPathComponent("Source", isDirectory: true)
@@ -328,5 +375,54 @@ private final class LockedSnapshots: @unchecked Sendable {
     lock.lock()
     snapshots.append(snapshot)
     lock.unlock()
+  }
+}
+
+private final class DirectoryMonitorTestSignal: @unchecked Sendable {
+  private let markerUrl: URL
+  private let expectation: XCTestExpectation
+  private let lock = NSLock()
+  private var storedFailureMessage: String?
+  private var didComplete = false
+
+  init(markerUrl: URL, expectation: XCTestExpectation) {
+    self.markerUrl = markerUrl
+    self.expectation = expectation
+  }
+
+  var failureMessage: String? {
+    lock.lock()
+    defer { lock.unlock() }
+    return storedFailureMessage
+  }
+
+  var isComplete: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return didComplete
+  }
+
+  func handleChange() {
+    guard FileManager.default.fileExists(atPath: markerUrl.path) else { return }
+    lock.lock()
+    guard !didComplete else {
+      lock.unlock()
+      return
+    }
+    didComplete = true
+    lock.unlock()
+    expectation.fulfill()
+  }
+
+  func handleFailure(_ error: any Error) {
+    lock.lock()
+    guard !didComplete else {
+      lock.unlock()
+      return
+    }
+    didComplete = true
+    storedFailureMessage = error.localizedDescription
+    lock.unlock()
+    expectation.fulfill()
   }
 }

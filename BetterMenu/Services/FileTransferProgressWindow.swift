@@ -146,9 +146,12 @@ final class FileTransferProgressWindowController: NSWindowController {
       // 窗口尚未上屏时 `window.screen` 为 nil，此时以主屏为准。
       if let visibleFrame = (window.screen ?? NSScreen.main)?.visibleFrame {
         let shiftedFrame = CGRect(origin: origin, size: window.frame.size)
-        guard visibleFrame.contains(shiftedFrame) else { return }
+        if visibleFrame.contains(shiftedFrame) {
+          window.setFrameOrigin(origin)
+        }
+      } else {
+        window.setFrameOrigin(origin)
       }
-      window.setFrameOrigin(origin)
     }
 
     window.orderFrontRegardless()

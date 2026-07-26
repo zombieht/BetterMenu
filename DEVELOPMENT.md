@@ -70,7 +70,7 @@ Finder 扩展不得通过 URL Scheme 直接传递动作 ID、源文件路径或�
 
 - **主应用入口保持轻量**：`AppDelegate` 仅处理生命周期分发、AppKit 激活策略以及 URL Scheme 路由。
 - **ViewModel 高度内聚**：`BetterMenuSettingsModel` 只做数据和 UI 绑定，底层任务（如图标预热、System 进程命令）一律剥离成独立业务服务（如 `IconCacheManager`，`SystemCommand`）。
-- **FinderSync 扩展轻量化**：`FinderSync` 类仅扮演控制器角色。偏好读取由 `SettingsMonitor` 托管，图标解析与渲染由 `MenuIconManager` 托管，文件生成由 `FileCreator` 托管。两者的目录监听统一复用 `DirectoryChangeMonitor`：主应用是先同步写 `settings.plist`、再异步预热 `icon_cache.plist`，因此设置目录与缓存目录必须各自独立监听，否则扩展会在新图标落盘前就重新加载缓存，菜单里持续显示 SF Symbol 占位图。共享文件均为原子写（临时文件 + rename），监听对象只能是父目录而非文件本身。
+- **FinderSync 扩展轻量化**：`FinderSync` 类仅扮演控制器角色。偏好读取由 `SettingsMonitor` 托管，图标解析与渲染由 `MenuIconManager` 托管，文件生成由 `FileCreator` 托管。两者的目录监听统一复用 `DirectoryChangeMonitor`：主应用是先同步写 `settings.plist`、再异步预热 `icon_cache.plist`，因此设置目录与缓存目录必须各自独立监听，否则扩展会在新图标落盘前就重新加载缓存，菜单里持续显示 SF Symbol 占位图。共享文件均为原子写（临时文件 + rename），监听对象只能是父目录而非文件本身；缓存目录可能被系统或清理脚本删除，监听器必须在目录重建后自动恢复订阅。
 - **文件发送链路**：FinderSync 只负责读取当前选择、发现已挂载可写卷并构造菜单；隔空投送与文件复制通过 URL Scheme 交给主应用的 `FileTransferService` 执行，避免大文件任务依赖扩展进程生命周期。`FileTransferOperations` 使用系统 `copyfile` 回调提供字节进度和复制中取消，复制目标仅允许已挂载的非内部可写卷，发生重名时生成递增后缀，取消或失败时清理未完成项目，任务完成后由访达定位结果。统计目录体积同样必须响应取消（大目录枚举耗时很久），失败项目也要计入进度分子（否则部分失败时进度条永远到不了 100%），失败原因需经 `errorMessage(for:)` 转成中文。传输任务支持并发：`FileTransferService` 按任务 id 分别持有隔空投送的 `NSSharingService` 与其 delegate（面板异步关闭前不能提前释放），进度窗口按 `show(cascadeIndex:)` 阶梯错开。复制任务由扩展以 `activates: false` 唤起，进度窗口只能 `orderFrontRegardless()`，不得调用 `NSApp.activate()` 抢占前台。
 - **Swift 6 Concurrency 并发安全**：编写异步或跨 Target 通信的工具类时，必须按照 Swift 6 安全规范进行严格类型隔离，或使用锁机制辅以 `nonisolated(unsafe)` 消除编译警告。
 - **Xcode 项目同步**：新增 Swift 源文件后，必须同步注册在 `BetterMenu.xcodeproj/project.pbxproj` 对应的 Target 编译阶段。

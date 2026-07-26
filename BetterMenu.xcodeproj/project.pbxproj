@@ -46,6 +46,7 @@
 		B20000000000000000000004 /* AppleScriptPathArgument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000631 /* AppleScriptPathArgument.swift */; };
 		B20000000000000000000005 /* FileTransferOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000641 /* FileTransferOperations.swift */; };
 		B20000000000000000000006 /* FileCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000721 /* FileCreator.swift */; };
+		B20000000000000000000007 /* DirectoryChangeMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000731 /* DirectoryChangeMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -439,6 +440,7 @@
 				B20000000000000000000004 /* AppleScriptPathArgument.swift in Sources */,
 				B20000000000000000000005 /* FileTransferOperations.swift in Sources */,
 				B20000000000000000000006 /* FileCreator.swift in Sources */,
+				B20000000000000000000007 /* DirectoryChangeMonitor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

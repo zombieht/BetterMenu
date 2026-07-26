@@ -8,6 +8,7 @@ final class FileTransferService {
     let task: Task<Void, Never>
     let cancellationToken: FileTransferCancellationToken
     let progressWindowController: FileTransferProgressWindowController
+    let cascadeIndex: Int
   }
 
   /// `NSSharingService.delegate` 是弱引用，因此需要与 service 一起被持有。
@@ -81,8 +82,9 @@ final class FileTransferService {
     progressModel.onCancel = { [weak self] in
       self?.cancelCopyTask(taskId)
     }
+    let cascadeIndex = nextAvailableCascadeIndex()
     // 已有传输任务时把新窗口阶梯式错开，避免多个进度窗口完全重叠。
-    progressWindowController.show(cascadeIndex: copyTasks.count)
+    progressWindowController.show(cascadeIndex: cascadeIndex)
 
     let task = Task { [weak self] in
       let result = await Task.detached(priority: .userInitiated) {
@@ -123,8 +125,15 @@ final class FileTransferService {
     copyTasks[taskId] = ActiveCopyTask(
       task: task,
       cancellationToken: cancellationToken,
-      progressWindowController: progressWindowController
+      progressWindowController: progressWindowController,
+      cascadeIndex: cascadeIndex
     )
+  }
+
+  /// 返回当前未被传输窗口占用的最小层叠位置，任务完成后该位置会自然释放并复用。
+  private func nextAvailableCascadeIndex() -> Int {
+    let occupiedIndexes = Set(copyTasks.values.map(\.cascadeIndex))
+    return (0...).first(where: { !occupiedIndexes.contains($0) }) ?? 0
   }
 
   private func existingSourceUrls(from urls: [URL]) -> [URL] {
