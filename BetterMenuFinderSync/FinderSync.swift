@@ -352,29 +352,11 @@ final class FinderSync: FIFinderSync {
       return
     }
 
-    var components = URLComponents()
-    components.scheme = "BetterMenu"
-    components.host = "run-action"
-    components.queryItems = [
-      URLQueryItem(name: "id", value: action.id),
-      URLQueryItem(name: "path", value: resolvedUrl.path),
-    ]
-
-    guard let requestUrl = components.url else {
-      showError(message: "无法生成请求指令。")
-      return
-    }
-
-    let configuration = NSWorkspace.OpenConfiguration()
-    configuration.activates = true
-    configuration.promptsUserIfNeeded = true
-
-    NSWorkspace.shared.open(requestUrl, configuration: configuration) { [weak self] _, error in
-      if let error = error {
-        self?.showError(message: "唤起 BetterMenu 失败：\(error.localizedDescription)")
-        return
-      }
-    }
+    let request = BetterMenuSecureRequest.runAction(
+      actionId: action.id,
+      path: resolvedUrl.standardizedFileURL.path
+    )
+    openMainApplication(with: request, activates: true)
   }
 
   @objc private func sendSelectedItemsViaAirDrop(_ sender: NSMenuItem) {
@@ -390,36 +372,46 @@ final class FinderSync: FIFinderSync {
   }
 
   /// 将文件传输任务交给主应用执行，避免长时间复制受 Finder 扩展生命周期影响。
-  private func openFileTransferRequest(mode: FileTransferMode, destination: URL?) {
+  private func openFileTransferRequest(
+    mode: BetterMenuFileTransferMode,
+    destination: URL?
+  ) {
     let selectedUrls = selectedItemUrlsForFileTransfer()
     guard !selectedUrls.isEmpty else {
       showError(message: "没有可发送的文件或文件夹。")
       return
     }
 
-    var components = URLComponents()
-    components.scheme = "BetterMenu"
-    components.host = "send-files"
+    let request = BetterMenuSecureRequest.fileTransfer(
+      sourcePaths: selectedUrls.map { $0.standardizedFileURL.path },
+      mode: mode,
+      destinationPath: destination?.standardizedFileURL.path
+    )
+    openMainApplication(with: request, activates: mode == .airDrop)
+  }
 
-    var queryItems = [URLQueryItem(name: "mode", value: mode.rawValue)]
-    queryItems.append(
-      contentsOf: selectedUrls.map { URLQueryItem(name: "path", value: $0.path) })
-    if let destination {
-      queryItems.append(URLQueryItem(name: "destination", value: destination.path))
-    }
-    components.queryItems = queryItems
-
-    guard let requestUrl = components.url else {
-      showError(message: "无法生成文件发送请求。")
+  /// 写入一次性请求后，仅通过不透明 UUID 唤起主应用。
+  private func openMainApplication(
+    with request: BetterMenuSecureRequest,
+    activates: Bool
+  ) {
+    let requestUrl: URL
+    do {
+      try BetterMenuSecureRequestStore.submit(request)
+      requestUrl = try BetterMenuSecureRequestStore.launchUrl(for: request.id)
+    } catch {
+      BetterMenuSecureRequestStore.discard(requestId: request.id)
+      showError(message: "无法安全地提交请求：\(error.localizedDescription)")
       return
     }
 
     let configuration = NSWorkspace.OpenConfiguration()
-    configuration.activates = mode == .airDrop
+    configuration.activates = activates
     configuration.promptsUserIfNeeded = true
 
     NSWorkspace.shared.open(requestUrl, configuration: configuration) { [weak self] _, error in
       if let error {
+        BetterMenuSecureRequestStore.discard(requestId: request.id)
         self?.showError(message: "唤起 BetterMenu 失败：\(error.localizedDescription)")
       }
     }
@@ -524,11 +516,6 @@ private enum FinderLocationIntent {
   case copyCurrentPath
   case openSelectionContainer
   case openSelection
-}
-
-private enum FileTransferMode: String {
-  case airDrop = "airdrop"
-  case copy
 }
 
 extension URL {

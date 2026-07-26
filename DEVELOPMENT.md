@@ -26,6 +26,7 @@ BetterMenu/
     BetterMenuPermissionAboutViews.swift    # 权限、Finder 重启与关于页面
     BetterMenuSettingsComponents.swift      # 设置页共享 UI 组件与流式布局
   Services/
+    AppleScriptPathArgument.swift  # AppleScript 文件路径安全编码，防止路径改变脚本语法
     ExternalAppLauncher.swift      # 终端、VS Code 等外部应用一键拉起服务
     FileTransferService.swift      # 隔空投送调度、外置卷后台复制与重名处理
     TerminalApp.swift              # 可选终端应用定义列表
@@ -38,6 +39,9 @@ BetterMenuFinderSync/
   MenuIconManager.swift          # 磁盘缓存图标加载、SF Symbol 深浅色重绘与内存渲染二级缓存
   FileCreator.swift              # 物理文件落盘、防文件名冲突算法计算与可执行权限设置
   Resources/Templates/           # Word/Excel/PPTX 内置空白二进制模板文件
+
+BetterMenuTests/
+  BetterMenuSecurityTests.swift  # 一次性请求、URL 路由、AppleScript 路径与设置迁移测试
 ```
 
 ### 共享配置机制
@@ -45,8 +49,15 @@ BetterMenuFinderSync/
 主 App 与 FinderSync 扩展运行在不同的进程中，二者通过用户主目录下的 plist 文件共享偏好配置：
 - **偏好设置路径**：`~/Library/Application Support/BetterMenu/settings.plist`
 - **图标缓存路径**：`~/Library/Caches/BetterMenu/icon_cache.plist`
+- **一次性请求目录**：`~/Library/Application Support/BetterMenu/Requests/`
 
 共享数据模型 `FileDefinition`、`FinderAction` 和键名统一在 `BetterMenuShared.swift` 中管理。新增需要两个 Target 同时读取的数据定义时，必须直接归入共享层。
+
+### Finder 扩展安全请求机制
+
+Finder 扩展不得通过 URL Scheme 直接传递动作 ID、源文件路径或目标路径。扩展会先将请求写入权限为 `0600` 的一次性 plist 文件，再使用仅包含随机 UUID 的 `bettermenu://request?id=...` 链接唤起主应用。
+
+主应用消费请求前会验证请求目录与文件所有者、POSIX 权限、文件类型、大小、协议版本、路径格式和 30 秒有效期。请求文件在读取时立即从目录移除，防止重放。旧版 `run-action`、`send-files` 和 `open-terminal` 明文参数路由不再接受。
 
 ### 结构维护规范
 
@@ -57,6 +68,24 @@ BetterMenuFinderSync/
 - **Swift 6 Concurrency 并发安全**：编写异步或跨 Target 通信的工具类时，必须按照 Swift 6 安全规范进行严格类型隔离，或使用锁机制辅以 `nonisolated(unsafe)` 消除编译警告。
 - **Xcode 项目同步**：新增 Swift 源文件后，必须同步注册在 `BetterMenu.xcodeproj/project.pbxproj` 对应的 Target 编译阶段。
 - **文档维护**：更改项目行为、扩展逻辑或业务边界时，必须同步修改本指南及 `README.md`。
+
+---
+
+## ✅ 自动化测试
+
+运行全部单元测试：
+
+```bash
+xcodebuild \
+  -project BetterMenu.xcodeproj \
+  -scheme BetterMenu \
+  -configuration Debug \
+  -destination 'platform=macOS' \
+  test
+```
+
+GitHub Actions 会在打包前执行同一组测试。安全通信或 AppleScript 路径处理发生变化时，必须同步补充 `BetterMenuSecurityTests`。
+
 
 ---
 

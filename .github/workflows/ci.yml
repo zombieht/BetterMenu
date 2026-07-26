@@ -31,7 +31,17 @@ jobs:
         run: |
           xcodebuild -version
 
-      # 步骤 2.5：安装 create-dmg 以启用精美 DMG 打包布局
+      # 步骤 2.5：运行安全通信、路径处理与设置迁移单元测试
+      - name: Run Tests
+        run: |
+          xcodebuild \
+            -project BetterMenu.xcodeproj \
+            -scheme BetterMenu \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            test
+
+      # 步骤 2.6：安装 create-dmg 以启用精美 DMG 打包布局
       - name: Install create-dmg
         run: |
           brew install create-dmg

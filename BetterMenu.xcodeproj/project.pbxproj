@@ -28,11 +28,15 @@
 		A10000000000000000000600 /* SystemCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000601 /* SystemCommand.swift */; };
 		A10000000000000000000610 /* IconCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000611 /* IconCacheManager.swift */; };
 		A10000000000000000000620 /* FileTransferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000621 /* FileTransferService.swift */; };
+		A10000000000000000000630 /* AppleScriptPathArgument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000631 /* AppleScriptPathArgument.swift */; };
 		A10000000000000000000700 /* SettingsMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000701 /* SettingsMonitor.swift */; };
 		A10000000000000000000710 /* MenuIconManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000711 /* MenuIconManager.swift */; };
 		A10000000000000000000720 /* FileCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000721 /* FileCreator.swift */; };
 		A65100FA5752180F6B4730FB /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 529E8C462C2C9F3A67CF1C58 /* Sparkle */; };
 		A10000000000000000000093 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000090 /* InfoPlist.strings */; };
+		B20000000000000000000001 /* BetterMenuSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000012 /* BetterMenuSecurityTests.swift */; };
+		B20000000000000000000003 /* BetterMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000301 /* BetterMenuShared.swift */; };
+		B20000000000000000000004 /* AppleScriptPathArgument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000631 /* AppleScriptPathArgument.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -86,11 +90,14 @@
 		A10000000000000000000601 /* SystemCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCommand.swift; sourceTree = "<group>"; };
 		A10000000000000000000611 /* IconCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconCacheManager.swift; sourceTree = "<group>"; };
 		A10000000000000000000621 /* FileTransferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTransferService.swift; sourceTree = "<group>"; };
+		A10000000000000000000631 /* AppleScriptPathArgument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptPathArgument.swift; sourceTree = "<group>"; };
 		A10000000000000000000701 /* SettingsMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMonitor.swift; sourceTree = "<group>"; };
 		A10000000000000000000711 /* MenuIconManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuIconManager.swift; sourceTree = "<group>"; };
 		A10000000000000000000721 /* FileCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCreator.swift; sourceTree = "<group>"; };
 		A10000000000000000000091 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		A10000000000000000000092 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		B20000000000000000000011 /* BetterMenuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BetterMenuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B20000000000000000000012 /* BetterMenuSecurityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterMenuSecurityTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +116,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B20000000000000000000020 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -117,6 +131,7 @@
 			children = (
 				A10000000000000000000022 /* BetterMenu */,
 				A10000000000000000000023 /* BetterMenuFinderSync */,
+				B20000000000000000000021 /* BetterMenuTests */,
 				A10000000000000000000020 /* README.md */,
 				A10000000000000000000024 /* Products */,
 			);
@@ -167,6 +182,7 @@
 				A10000000000000000000601 /* SystemCommand.swift */,
 				A10000000000000000000611 /* IconCacheManager.swift */,
 				A10000000000000000000621 /* FileTransferService.swift */,
+				A10000000000000000000631 /* AppleScriptPathArgument.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -192,8 +208,17 @@
 			children = (
 				A10000000000000000000011 /* BetterMenu.app */,
 				A10000000000000000000012 /* BetterMenuFinderSync.appex */,
+				B20000000000000000000011 /* BetterMenuTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B20000000000000000000021 /* BetterMenuTests */ = {
+			isa = PBXGroup;
+			children = (
+				B20000000000000000000012 /* BetterMenuSecurityTests.swift */,
+			);
+			path = BetterMenuTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -250,6 +275,23 @@
 			productReference = A10000000000000000000012 /* BetterMenuFinderSync.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		B20000000000000000000031 /* BetterMenuTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B20000000000000000000082 /* Build configuration list for PBXNativeTarget "BetterMenuTests" */;
+			buildPhases = (
+				B20000000000000000000051 /* Sources */,
+				B20000000000000000000020 /* Frameworks */,
+				B20000000000000000000052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BetterMenuTests;
+			productName = BetterMenuTests;
+			productReference = B20000000000000000000011 /* BetterMenuTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -266,6 +308,10 @@
 					};
 					A10000000000000000000032 = {
 						CreatedOnToolsVersion = 15.3;
+						ProvisioningStyle = Automatic;
+					};
+					B20000000000000000000031 = {
+						CreatedOnToolsVersion = 16.0;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -289,6 +335,7 @@
 			targets = (
 				A10000000000000000000031 /* BetterMenu */,
 				A10000000000000000000032 /* BetterMenuFinderSync */,
+				B20000000000000000000031 /* BetterMenuTests */,
 			);
 		};
 /* End PBXProject section */
@@ -313,6 +360,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B20000000000000000000052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -334,6 +388,7 @@
 				A10000000000000000000600 /* SystemCommand.swift in Sources */,
 				A10000000000000000000610 /* IconCacheManager.swift in Sources */,
 				A10000000000000000000620 /* FileTransferService.swift in Sources */,
+				A10000000000000000000630 /* AppleScriptPathArgument.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -346,6 +401,16 @@
 				A10000000000000000000700 /* SettingsMonitor.swift in Sources */,
 				A10000000000000000000710 /* MenuIconManager.swift in Sources */,
 				A10000000000000000000720 /* FileCreator.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B20000000000000000000051 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B20000000000000000000001 /* BetterMenuSecurityTests.swift in Sources */,
+				B20000000000000000000003 /* BetterMenuShared.swift in Sources */,
+				B20000000000000000000004 /* AppleScriptPathArgument.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -568,6 +633,32 @@
 			};
 			name = Release;
 		};
+		B20000000000000000000071 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zombie.BetterMenuTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		B20000000000000000000072 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zombie.BetterMenuTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -594,6 +685,15 @@
 			buildConfigurations = (
 				A10000000000000000000073 /* Debug */,
 				A10000000000000000000074 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B20000000000000000000082 /* Build configuration list for PBXNativeTarget "BetterMenuTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B20000000000000000000071 /* Debug */,
+				B20000000000000000000072 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
