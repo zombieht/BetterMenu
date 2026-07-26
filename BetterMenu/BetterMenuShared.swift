@@ -51,6 +51,51 @@ enum BetterMenuShared {
       .appendingPathComponent("Library/Caches/BetterMenu/icon_cache.plist")
   }
 
+  /// 返回当前已挂载、可写且不位于 Mac 内部磁盘上的文件传输目标。
+  static func availableFileTransferVolumes(
+    fileManager: FileManager = .default
+  ) -> [FileTransferVolume] {
+    let resourceKeys: Set<URLResourceKey> = [
+      .volumeIsBrowsableKey,
+      .volumeIsEjectableKey,
+      .volumeIsInternalKey,
+      .volumeIsLocalKey,
+      .volumeIsReadOnlyKey,
+      .volumeIsRemovableKey,
+      .volumeLocalizedNameKey,
+    ]
+    let mountedVolumeUrls =
+      fileManager.mountedVolumeURLs(
+        includingResourceValuesForKeys: Array(resourceKeys),
+        options: [.skipHiddenVolumes]
+      ) ?? []
+
+    return mountedVolumeUrls.compactMap { volumeUrl in
+      guard let values = try? volumeUrl.resourceValues(forKeys: resourceKeys) else {
+        return nil
+      }
+      let isSupportedTarget =
+        values.volumeIsInternal == false
+        || values.volumeIsRemovable == true
+        || values.volumeIsEjectable == true
+        || values.volumeIsLocal == false
+      guard
+        values.volumeIsBrowsable != false,
+        isSupportedTarget,
+        values.volumeIsReadOnly != true,
+        fileManager.isWritableFile(atPath: volumeUrl.path)
+      else {
+        return nil
+      }
+
+      let name = values.volumeLocalizedName ?? volumeUrl.lastPathComponent
+      return FileTransferVolume(name: name, url: volumeUrl.standardizedFileURL)
+    }
+    .sorted {
+      $0.name.localizedStandardCompare($1.name) == .orderedAscending
+    }
+  }
+
   // MARK: - 支持的第三方编辑器信息
 
   /// 表示支持的第三方编辑器的元数据。
@@ -316,10 +361,22 @@ struct FinderAction: Identifiable, Codable, Hashable, Sendable {
   var isEnabled: Bool
 }
 
-/// 默认提供的快捷操作列表。
-let defaultSharedActions: [FinderAction] = [
+/// 表示“发送文件到”菜单中的一个已挂载文件系统目标。
+struct FileTransferVolume: Identifiable, Hashable, Sendable {
+  var id: URL { url }
+  let name: String
+  let url: URL
+}
+
+/// 始终保留在设置页中的内置 Finder 快捷操作。
+let requiredSharedActions: [FinderAction] = [
   FinderAction(id: "terminal", title: "在终端中打开", iconName: "terminal", isEnabled: true),
   FinderAction(id: "copyPath", title: "复制当前路径", iconName: "doc.on.doc", isEnabled: true),
+  FinderAction(id: "sendFile", title: "发送文件到", iconName: "paperplane", isEnabled: true),
+]
+
+/// 默认提供的快捷操作列表。
+let defaultSharedActions: [FinderAction] = requiredSharedActions + [
   FinderAction(
     id: "vscode",
     title: "在 VS Code 中打开",
@@ -327,6 +384,24 @@ let defaultSharedActions: [FinderAction] = [
     isEnabled: true
   ),
 ]
+
+/// 为旧版配置补齐后来新增的必备内置操作，同时保留用户原有的启用状态和排序。
+func actionsAddingMissingRequiredActions(_ actions: [FinderAction]) -> [FinderAction] {
+  var normalizedActions = actions
+
+  for requiredAction in requiredSharedActions
+  where !normalizedActions.contains(where: { $0.id == requiredAction.id }) {
+    if requiredAction.id == "sendFile",
+      let copyPathIndex = normalizedActions.firstIndex(where: { $0.id == "copyPath" })
+    {
+      normalizedActions.insert(requiredAction, at: copyPathIndex + 1)
+    } else {
+      normalizedActions.append(requiredAction)
+    }
+  }
+
+  return normalizedActions
+}
 
 // MARK: - 公共映射函数
 

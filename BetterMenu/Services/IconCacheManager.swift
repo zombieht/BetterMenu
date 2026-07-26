@@ -42,7 +42,7 @@ enum IconCacheManager {
 
       // 2. 预热并缓存外部操作的 App 真实图标到共享缓存中，以便 FinderSync 进程直接读取
       for action in activeActions {
-        if action.id == "terminal" || action.id == "copyPath" {
+        if requiredSharedActions.contains(where: { $0.id == action.id }) {
           continue
         }
 

@@ -70,7 +70,10 @@ extension View {
   @ViewBuilder
   func liquidGlassCard() -> some View {
     self
-      .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .background(
+        Color(nsColor: .controlBackgroundColor),
+        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+      )
       .overlay {
         RoundedRectangle(cornerRadius: 10, style: .continuous)
           .stroke(.quaternary, lineWidth: 1)

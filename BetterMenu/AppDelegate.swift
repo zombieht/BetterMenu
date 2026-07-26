@@ -102,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   static private(set) var shared: AppDelegate?
 
   private let logger = Logger(subsystem: "com.zombie.BetterMenu", category: "AppDelegate")
+  private let fileTransferService = FileTransferService()
   let settingsModel = BetterMenuSettingsModel()
   var window: NSWindow?
   private var initialWindowWorkItem: DispatchWorkItem?
@@ -251,18 +252,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+    let queryItems = components.queryItems ?? []
+
+    if url.host == "send-files" {
+      handleFileTransferRequest(queryItems: queryItems)
+      return
+    }
 
     // URLComponents.queryItems 会自动对参数值做百分号解码。
     // 这里不能再次调用 removingPercentEncoding，否则文件名中真实存在的 "%20"
     // 会被误还原为空格，导致外部应用打开错误路径。
-    guard let path = components.queryItems?.first(where: { $0.name == "path" })?.value else {
+    guard let path = queryItems.first(where: { $0.name == "path" })?.value else {
       logger.error("Missing path query parameter in URL: \(url.absoluteString, privacy: .public)")
       return
     }
 
     // 统一处理 run-action 指令
     if url.host == "run-action" {
-      guard let actionId = components.queryItems?.first(where: { $0.name == "id" })?.value else {
+      guard let actionId = queryItems.first(where: { $0.name == "id" })?.value else {
         logger.error("Missing action ID in URL: \(url.absoluteString, privacy: .public)")
         return
       }
@@ -275,6 +282,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       settingsModel.openTerminal(atPath: path)
     } else {
       logger.error("Unknown route host: \(url.host ?? "", privacy: .public)")
+    }
+  }
+
+  private func handleFileTransferRequest(queryItems: [URLQueryItem]) {
+    let sourceUrls = queryItems
+      .filter { $0.name == "path" }
+      .compactMap(\.value)
+      .map { URL(fileURLWithPath: $0) }
+    guard !sourceUrls.isEmpty else {
+      logger.error("Missing source paths in file transfer request")
+      return
+    }
+
+    guard let mode = queryItems.first(where: { $0.name == "mode" })?.value else {
+      logger.error("Missing mode in file transfer request")
+      return
+    }
+
+    switch mode {
+    case "airdrop":
+      fileTransferService.sendViaAirDrop(sourceUrls: sourceUrls)
+    case "copy":
+      guard
+        let destinationPath = queryItems.first(where: { $0.name == "destination" })?.value
+      else {
+        logger.error("Missing destination in file copy request")
+        return
+      }
+      fileTransferService.copy(
+        sourceUrls: sourceUrls,
+        to: URL(fileURLWithPath: destinationPath, isDirectory: true)
+      )
+    default:
+      logger.error("Unsupported file transfer mode: \(mode, privacy: .public)")
     }
   }
 

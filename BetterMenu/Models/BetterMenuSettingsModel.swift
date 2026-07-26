@@ -243,7 +243,7 @@ final class BetterMenuSettingsModel: ObservableObject {
       ) ?? .menuBarOnly
 
     if let storedActions = sharedSettings.actions {
-      self.actions = storedActions
+      self.actions = actionsAddingMissingRequiredActions(storedActions)
     } else {
       // 兼容以前的硬编码布尔值
       var acts = defaultSharedActions
@@ -261,7 +261,7 @@ final class BetterMenuSettingsModel: ObservableObject {
         acts[idx].isEnabled = oldPathEnabled
       }
       // vscode 默认启用
-      self.actions = acts
+      self.actions = actionsAddingMissingRequiredActions(acts)
     }
 
     let storedTerminalType =
@@ -469,7 +469,7 @@ final class BetterMenuSettingsModel: ObservableObject {
 
   /// 检查某一个 action 是否在系统中已安装
   func isActionInstalled(_ actionId: String) -> Bool {
-    if actionId == "terminal" || actionId == "copyPath" {
+    if requiredSharedActions.contains(where: { $0.id == actionId }) {
       return true
     }
     if let editor = BetterMenuShared.supportedEditors.first(where: { $0.idString == actionId }) {
@@ -844,5 +844,4 @@ final class BetterMenuSettingsModel: ObservableObject {
     return migrated
   }
 }
-
 

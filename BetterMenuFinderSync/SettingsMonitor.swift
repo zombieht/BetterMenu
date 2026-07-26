@@ -72,7 +72,7 @@ final class SettingsMonitor: @unchecked Sendable {
 
     let finalActions: [FinderAction]
     if let actionsList = shared.actions {
-      finalActions = actionsList
+      finalActions = actionsAddingMissingRequiredActions(actionsList)
     } else {
       // 兼容以前的布尔设置键
       var acts = defaultSharedActions
@@ -85,7 +85,7 @@ final class SettingsMonitor: @unchecked Sendable {
       if let idx = acts.firstIndex(where: { $0.id == "copyPath" }) {
         acts[idx] = FinderAction(id: "copyPath", title: "复制当前路径", iconName: "doc.on.doc", isEnabled: pathVal)
       }
-      finalActions = acts
+      finalActions = actionsAddingMissingRequiredActions(acts)
     }
 
     return SettingsSnapshot(

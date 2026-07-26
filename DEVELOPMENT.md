@@ -27,6 +27,7 @@ BetterMenu/
     BetterMenuSettingsComponents.swift      # 设置页共享 UI 组件与流式布局
   Services/
     ExternalAppLauncher.swift      # 终端、VS Code 等外部应用一键拉起服务
+    FileTransferService.swift      # 隔空投送调度、外置卷后台复制与重名处理
     TerminalApp.swift              # 可选终端应用定义列表
     SystemCommand.swift            # 底层命令行调用 Process 进程运行封装
     IconCacheManager.swift         # 专职后台图标渲染、预热与序列化磁盘缓存服务
@@ -52,6 +53,7 @@ BetterMenuFinderSync/
 - **主应用入口保持轻量**：`AppDelegate` 仅处理生命周期分发、AppKit 激活策略以及 URL Scheme 路由。
 - **ViewModel 高度内聚**：`BetterMenuSettingsModel` 只做数据和 UI 绑定，底层任务（如图标预热、System 进程命令）一律剥离成独立业务服务（如 `IconCacheManager`，`SystemCommand`）。
 - **FinderSync 扩展轻量化**：`FinderSync` 类仅扮演控制器角色。偏好读取与目录监听由 `SettingsMonitor` 托管，图标解析与渲染由 `MenuIconManager` 托管，文件生成由 `FileCreator` 托管。
+- **文件发送链路**：FinderSync 只负责读取当前选择、发现已挂载可写卷并构造菜单；隔空投送与文件复制通过 URL Scheme 交给主应用的 `FileTransferService` 执行，避免大文件任务依赖扩展进程生命周期。复制目标仅允许已挂载的非内部可写卷，发生重名时生成递增后缀，任务完成后由访达定位结果。
 - **Swift 6 Concurrency 并发安全**：编写异步或跨 Target 通信的工具类时，必须按照 Swift 6 安全规范进行严格类型隔离，或使用锁机制辅以 `nonisolated(unsafe)` 消除编译警告。
 - **Xcode 项目同步**：新增 Swift 源文件后，必须同步注册在 `BetterMenu.xcodeproj/project.pbxproj` 对应的 Target 编译阶段。
 - **文档维护**：更改项目行为、扩展逻辑或业务边界时，必须同步修改本指南及 `README.md`。
@@ -90,4 +92,3 @@ BetterMenuFinderSync/
 1. **配置公钥**：将生成的 **`SUPublicEDKey`（公钥）** 填入项目中的 `BetterMenu/Info.plist` 的 `SUPublicEDKey` 键值中。
 2. **配置私钥**：将生成的 **`SUPrivateEDKey`（私钥）** 配置到您的 GitHub 仓库的 Secrets 中，变量名设置为 `SPARKLE_PRIVATE_KEY`。
 3. **触发自动化部署**：每次推送以 `v` 开头的 Tag（如 `v1.0.1`），GitHub Actions 工作流将自动使用此私钥对应用包进行签名，生成描述文件 `appcast.xml`，并随 Release 一同分发。客户端将通过 `https://github.com/zombieht/BetterMenu/releases/latest/download/appcast.xml` 获取最新的更新信息并下载安全的更新包。
-

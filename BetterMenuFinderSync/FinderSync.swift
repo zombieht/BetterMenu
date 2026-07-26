@@ -14,7 +14,9 @@ final class FinderSync: FIFinderSync {
   // Tag 路由映射，每次构建菜单时更新，以保证点击回调可以找到对应数据
   private var menuDefinitionsByTag: [Int: FileDefinition] = [:]
   private var actionDefinitionsByTag: [Int: FinderAction] = [:]
+  private var fileTransferVolumesByTag: [Int: FileTransferVolume] = [:]
   private static let dynamicActionTagBase = 1000
+  private static let fileTransferVolumeTagBase = 2000
 
   // MARK: - 基础图标加载
 
@@ -110,6 +112,7 @@ final class FinderSync: FIFinderSync {
     let menu = NSMenu(title: "BetterMenu")
     menuDefinitionsByTag.removeAll()
     actionDefinitionsByTag.removeAll()
+    fileTransferVolumesByTag.removeAll()
 
     menu.addItem(makeFileCreationMenuItem(from: snapshot))
     for item in makeEnabledShortcutItems(from: snapshot) {
@@ -155,12 +158,78 @@ final class FinderSync: FIFinderSync {
   /// 构建终端、复制路径、编辑器等一级右键快捷操作
   private func makeEnabledShortcutItems(from snapshot: SettingsMonitor.SettingsSnapshot) -> [NSMenuItem] {
     var nextTag = Self.dynamicActionTagBase
-    return snapshot.actions.filter(\.isEnabled).map { action in
+    return snapshot.actions.filter(\.isEnabled).compactMap { action in
+      if action.id == "sendFile" {
+        return makeFileTransferMenuItem(action: action)
+      }
+
       let tag = nextTag
       nextTag += 1
       actionDefinitionsByTag[tag] = action
       return makeShortcutItem(action: action, tag: tag)
     }
+  }
+
+  /// 构建“发送文件到”二级菜单，列出隔空投送以及当前可用的外置卷和网络共享卷。
+  private func makeFileTransferMenuItem(action: FinderAction) -> NSMenuItem? {
+    let selectedUrls = selectedItemUrlsForFileTransfer()
+    guard !selectedUrls.isEmpty else { return nil }
+
+    let parent = NSMenuItem(title: action.title, action: nil, keyEquivalent: "")
+    parent.image = MenuIconManager.finderMenuSymbol(
+      named: action.iconName, accessibilityDescription: action.title)
+
+    let submenu = NSMenu(title: action.title)
+    if let airDropService = NSSharingService(named: .sendViaAirDrop),
+      airDropService.canPerform(withItems: selectedUrls)
+    {
+      let airDropItem = NSMenuItem(
+        title: "隔空投送…",
+        action: #selector(sendSelectedItemsViaAirDrop(_:)),
+        keyEquivalent: ""
+      )
+      airDropItem.target = self
+      let airDropIcon = airDropService.image
+      airDropIcon.size = NSSize(width: 18, height: 18)
+      airDropItem.image = airDropIcon
+      submenu.addItem(airDropItem)
+    }
+
+    let selectedVolumePaths = sourceVolumePaths(for: selectedUrls)
+    let transferVolumes = BetterMenuShared.availableFileTransferVolumes().filter {
+      !selectedVolumePaths.contains($0.url.path)
+    }
+    if !submenu.items.isEmpty, !transferVolumes.isEmpty {
+      submenu.addItem(.separator())
+    }
+
+    for (offset, volume) in transferVolumes.enumerated() {
+      let tag = Self.fileTransferVolumeTagBase + offset
+      let item = NSMenuItem(
+        title: volume.name,
+        action: #selector(copySelectedItemsToVolume(_:)),
+        keyEquivalent: ""
+      )
+      item.target = self
+      item.tag = tag
+
+      let volumeIcon = NSWorkspace.shared.icon(forFile: volume.url.path)
+      volumeIcon.size = NSSize(width: 18, height: 18)
+      item.image = volumeIcon
+
+      fileTransferVolumesByTag[tag] = volume
+      submenu.addItem(item)
+    }
+
+    if submenu.items.isEmpty {
+      let placeholder = NSMenuItem(
+        title: "未找到可用设备或磁盘", action: nil, keyEquivalent: "")
+      placeholder.isEnabled = false
+      submenu.addItem(placeholder)
+    }
+
+    parent.submenu = submenu
+    return parent
   }
 
   private func makeShortcutItem(action: FinderAction, tag: Int) -> NSMenuItem {
@@ -308,6 +377,54 @@ final class FinderSync: FIFinderSync {
     }
   }
 
+  @objc private func sendSelectedItemsViaAirDrop(_ sender: NSMenuItem) {
+    openFileTransferRequest(mode: .airDrop, destination: nil)
+  }
+
+  @objc private func copySelectedItemsToVolume(_ sender: NSMenuItem) {
+    guard let volume = fileTransferVolumesByTag[sender.tag] else {
+      showError(message: "所选设备已不可用，请重新打开右键菜单后再试。")
+      return
+    }
+    openFileTransferRequest(mode: .copy, destination: volume.url)
+  }
+
+  /// 将文件传输任务交给主应用执行，避免长时间复制受 Finder 扩展生命周期影响。
+  private func openFileTransferRequest(mode: FileTransferMode, destination: URL?) {
+    let selectedUrls = selectedItemUrlsForFileTransfer()
+    guard !selectedUrls.isEmpty else {
+      showError(message: "没有可发送的文件或文件夹。")
+      return
+    }
+
+    var components = URLComponents()
+    components.scheme = "BetterMenu"
+    components.host = "send-files"
+
+    var queryItems = [URLQueryItem(name: "mode", value: mode.rawValue)]
+    queryItems.append(
+      contentsOf: selectedUrls.map { URLQueryItem(name: "path", value: $0.path) })
+    if let destination {
+      queryItems.append(URLQueryItem(name: "destination", value: destination.path))
+    }
+    components.queryItems = queryItems
+
+    guard let requestUrl = components.url else {
+      showError(message: "无法生成文件发送请求。")
+      return
+    }
+
+    let configuration = NSWorkspace.OpenConfiguration()
+    configuration.activates = mode == .airDrop
+    configuration.promptsUserIfNeeded = true
+
+    NSWorkspace.shared.open(requestUrl, configuration: configuration) { [weak self] _, error in
+      if let error {
+        self?.showError(message: "唤起 BetterMenu 失败：\(error.localizedDescription)")
+      }
+    }
+  }
+
   // MARK: - 文件与目录处理辅助
 
   private func createFile(from definition: FileDefinition) {
@@ -345,6 +462,23 @@ final class FinderSync: FIFinderSync {
     case .openSelection:
       return selectedUrl ?? targetedUrl ?? desktopUrl
     }
+  }
+
+  private func selectedItemUrlsForFileTransfer() -> [URL] {
+    let fileManager = FileManager.default
+    return FIFinderSyncController.default().selectedItemURLs()?.filter {
+      fileManager.fileExists(atPath: $0.path)
+    } ?? []
+  }
+
+  private func sourceVolumePaths(for urls: [URL]) -> Set<String> {
+    Set(
+      urls.compactMap { url in
+        let values = try? url.resourceValues(forKeys: [.volumeURLKey])
+        let volumeUrl = values?.allValues[.volumeURLKey] as? URL
+        return volumeUrl?.standardizedFileURL.path
+      }
+    )
   }
 
   private func revealCreatedFileIfNeeded(_ fileUrl: URL, in directory: URL) {
@@ -390,6 +524,11 @@ private enum FinderLocationIntent {
   case copyCurrentPath
   case openSelectionContainer
   case openSelection
+}
+
+private enum FileTransferMode: String {
+  case airDrop = "airdrop"
+  case copy
 }
 
 extension URL {
