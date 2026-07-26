@@ -94,7 +94,7 @@ xcodebuild \
 
 `BetterMenuTests` 是无宿主单元测试 Target。共享 Scheme 在测试动作中只构建测试 Target，不构建或注册 `BetterMenu.app` 与 Finder Sync 扩展。不要重新启用主 App 或扩展的 `buildForTesting`，否则本地测试产物会出现在“登录项与扩展”中。
 
-构建主 App 或 Finder Sync 扩展时必须固定复用项目 `DerivedData` 或 Xcode 默认路径中的一种，不得混用或为同一工作区创建多个临时 DerivedData 路径。`build_and_run.sh` 默认增量编译以复用该 `DerivedData`，需要全量重建时显式传入 `--clean`（`--clean-cache` 另行清空运行缓存）。`build_and_run.sh clean` 会在清理构建产物前注销开发扩展，`package.sh` 会在打包结束后注销临时 Release 产物。
+构建主 App 或 Finder Sync 扩展时必须固定复用项目 `DerivedData` 或 Xcode 默认路径中的一种，不得混用或为同一工作区创建多个临时 DerivedData 路径。`build_and_run.sh` 默认增量编译以复用该 `DerivedData`，需要全量重建时显式传入 `--clean`（`--clean-cache` 另行清空运行缓存）。`build_and_run.sh` 会在每次重新构建前注销其他 DerivedData 或临时目录中的 BetterMenu 开发构建，并在重新构建或清理当前构建产物前注销当前开发扩展；注销必须在 `xcodebuild` 覆盖旧 `.appex` 前完成，否则旧插件 UUID 会残留在系统扩展列表中。清理其他开发构建的注册记录不会删除其文件；`package.sh` 会在打包结束后注销临时 Release 产物。
 
 GitHub Actions 会在打包前执行代码风格检查与同一组测试，并检查测试产物中没有 `BetterMenu.app` 或 `BetterMenuFinderSync.appex`，防止 Scheme 配置回退。安全通信或 AppleScript 路径处理发生变化时，必须同步补充 `BetterMenuSecurityTests`；文件创建、复制、进度或取消逻辑发生变化时，必须同步补充 `BetterMenuCoreServiceTests`。
 

@@ -176,6 +176,64 @@ unregister_build_product() {
   fi
 }
 
+# 注销其他 DerivedData 或临时目录中的 BetterMenu 开发构建，避免系统扩展列表重复。
+# unregister_other_build_products() {
+#   if [[ ! -x "$LSREGISTER" ]]; then
+#     return
+#   fi
+
+#   local registered_app
+#   while IFS= read -r registered_app; do
+#     if [[ -z "$registered_app" || "$registered_app" == "$APP_BUNDLE" ]]; then
+#       continue
+#     fi
+
+#     case "$registered_app" in
+#       */DerivedData/Build/Products/*/"$APP_NAME.app"|\
+#       /private/tmp/BetterMenu*/Build/Products/*/"$APP_NAME.app"|\
+#       /private/var/folders/*/BetterMenu*/Build/Products/*/"$APP_NAME.app")
+#         log_info "正在注销其他 BetterMenu 开发构建: $registered_app"
+#         local registered_extension
+#         registered_extension="$registered_app/Contents/PlugIns/$EXTENSION_NAME.appex"
+#         /usr/bin/pluginkit \
+#           -r "$registered_extension" >/dev/null 2>&1 || true
+#         "$LSREGISTER" -u "$registered_app" >/dev/null 2>&1 || true
+#         ;;
+#     esac
+#   done < <(
+#     "$LSREGISTER" -dump 2>/dev/null | awk -v bundle_id="$BUNDLE_ID" '
+#       function emit_record() {
+#         if (path != "" && identifier == bundle_id) {
+#           print path
+#         }
+#         path = ""
+#         identifier = ""
+#       }
+
+#       /^-+$/ {
+#         emit_record()
+#         next
+#       }
+
+#       /^path:/ {
+#         path = $0
+#         sub(/^path:[[:space:]]+/, "", path)
+#         sub(/[[:space:]]+\(0x[[:xdigit:]]+\)$/, "", path)
+#         next
+#       }
+
+#       /^identifier:/ {
+#         identifier = $0
+#         sub(/^identifier:[[:space:]]+/, "", identifier)
+#       }
+
+#       END {
+#         emit_record()
+#       }
+#     '
+#   )
+# }
+
 # 安全地清理编译缓存，避免危险删除
 clean_derived_data() {
   # 安全审计：确保路径不为空，且父目录属于该项目，防止 rm -rf 误伤系统根目录或用户主目录
@@ -232,6 +290,11 @@ build_app() {
   log_info "正在清理正在运行的旧进程..."
   pkill -u "$USER" -x "$APP_NAME" >/dev/null 2>&1 || true
   pkill -u "$USER" -x "$EXTENSION_NAME" >/dev/null 2>&1 || true
+
+  # unregister_other_build_products
+
+  # 必须在 xcodebuild 覆盖旧 appex 前注销，否则旧插件 UUID 会残留在系统扩展列表中。
+  unregister_build_product
 
   log_info "开始编译项目 BetterMenu (Configuration: $CONFIGURATION)..."
   local start_time=$SECONDS

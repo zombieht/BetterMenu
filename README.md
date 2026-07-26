@@ -105,6 +105,21 @@ xattr -cr /Applications/BetterMenu.app
 
 该脚本默认使用增量编译，日常改动只重新编译受影响的文件。需要全量重建时追加 `--clean`，需要一并清空运行缓存时追加 `--clean-cache`；`./script/build_and_run.sh clean` 会同时清理两者。
 
+清理 App 运行缓存后启动：
+```bash
+./script/build_and_run.sh --clean-cache run
+```
+
+同时清理 DerivedData 构建缓存和 App 运行缓存后启动：
+```bash
+./script/build_and_run.sh --clean --clean-cache run
+```
+
+只清理两类缓存、不启动 App：
+```bash
+./script/build_and_run.sh clean
+```
+
 ### 仅构建并注册扩展
 如果只需重新注册 Finder Sync 扩展，可执行：
 ```bash
@@ -124,7 +139,7 @@ xattr -cr /Applications/BetterMenu.app
 ./script/package.sh
 ```
 
-单元测试使用无宿主测试 Target，不会构建或注册 Finder Sync 扩展。开发脚本会在清理或打包完成时注销对应构建产物，避免“登录项与扩展”积累重复的开发扩展。
+单元测试使用无宿主测试 Target，不会构建或注册 Finder Sync 扩展。开发脚本会在重新构建前注销其他 DerivedData 或临时目录中的 BetterMenu 开发构建，并在清理或打包完成时注销对应构建产物，避免“登录项与扩展”积累重复的开发扩展；该过程不会删除其他构建目录中的文件。
 
 ---
 
