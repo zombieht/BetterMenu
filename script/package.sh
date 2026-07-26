@@ -10,9 +10,11 @@ set -euo pipefail
 # 1. 默认配置与路径定义
 # ------------------------------------------------------------------------------
 APP_NAME="BetterMenu"
+EXTENSION_NAME="BetterMenuFinderSync"
 SCHEME_NAME="BetterMenu"
 PROJECT_NAME="BetterMenu.xcodeproj"
 CONFIGURATION="Release"
+VOLUME_NAME="$APP_NAME"
 
 # 获取项目根目录 (绝对路径)
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -20,6 +22,10 @@ DERIVED_DATA_PATH="$ROOT_DIR/DerivedData"
 DIST_DIR="$ROOT_DIR/dist"
 STAGE_DIR="$DIST_DIR/dmg-root"
 APP_BUNDLE="$DERIVED_DATA_PATH/Build/Products/$CONFIGURATION/$APP_NAME.app"
+APP_EXTENSION="$APP_BUNDLE/Contents/PlugIns/$EXTENSION_NAME.appex"
+DMG_APP_BUNDLE="/Volumes/$VOLUME_NAME/$APP_NAME.app"
+DMG_APP_EXTENSION="$DMG_APP_BUNDLE/Contents/PlugIns/$EXTENSION_NAME.appex"
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
 
 # ------------------------------------------------------------------------------
 # 2. 终端彩色日志输出工具函数
@@ -43,7 +49,19 @@ log_error() {
 # ------------------------------------------------------------------------------
 # 3. 自动垃圾回收 (无论成功或异常出错退出，均安全擦除临时打包目录)
 # ------------------------------------------------------------------------------
+unregister_build_product() {
+  /usr/bin/pluginkit -r "$APP_EXTENSION" >/dev/null 2>&1 || true
+  /usr/bin/pluginkit -r "$DMG_APP_EXTENSION" >/dev/null 2>&1 || true
+
+  if [[ -x "$LSREGISTER" ]]; then
+    "$LSREGISTER" -u "$APP_BUNDLE" >/dev/null 2>&1 || true
+    "$LSREGISTER" -u "$DMG_APP_BUNDLE" >/dev/null 2>&1 || true
+  fi
+}
+
 cleanup() {
+  unregister_build_product
+
   if [[ -d "$STAGE_DIR" ]]; then
     rm -rf "$STAGE_DIR"
   fi
@@ -70,7 +88,6 @@ fi
 
 DMG_NAME="$APP_NAME-$VERSION.dmg"
 ZIP_NAME="$APP_NAME-$VERSION.zip"
-VOLUME_NAME="$APP_NAME"
 
 # ------------------------------------------------------------------------------
 # 5. 执行环境校验与步骤函数

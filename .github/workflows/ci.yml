@@ -34,12 +34,26 @@ jobs:
       # 步骤 2.5：运行安全通信、路径处理与设置迁移单元测试
       - name: Run Tests
         run: |
+          TEST_DERIVED_DATA="$RUNNER_TEMP/BetterMenuTestsDerivedData"
           xcodebuild \
             -project BetterMenu.xcodeproj \
             -scheme BetterMenu \
             -configuration Debug \
             -destination 'platform=macOS' \
+            -derivedDataPath "$TEST_DERIVED_DATA" \
             test
+
+          UNEXPECTED_PRODUCTS="$(
+            find "$TEST_DERIVED_DATA/Build/Products" \
+              -type d \
+              \( -name 'BetterMenu.app' -o -name 'BetterMenuFinderSync.appex' \) \
+              -print
+          )"
+          if [[ -n "$UNEXPECTED_PRODUCTS" ]]; then
+            echo "单元测试不应构建或注册 BetterMenu App/Finder Sync 扩展："
+            echo "$UNEXPECTED_PRODUCTS"
+            exit 1
+          fi
 
       # 步骤 2.6：安装 create-dmg 以启用精美 DMG 打包布局
       - name: Install create-dmg

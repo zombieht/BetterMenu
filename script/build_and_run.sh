@@ -152,10 +152,20 @@ require_xcode() {
   fi
 }
 
+# 注销项目固定 DerivedData 路径中的开发构建，避免 LaunchServices 保留失效扩展。
+unregister_build_product() {
+  /usr/bin/pluginkit -r "$APP_EXTENSION" >/dev/null 2>&1 || true
+
+  if [[ -x "$LSREGISTER" ]]; then
+    "$LSREGISTER" -u "$APP_BUNDLE" >/dev/null 2>&1 || true
+  fi
+}
+
 # 安全地清理编译缓存，避免危险删除
 clean_derived_data() {
   # 安全审计：确保路径不为空，且父目录属于该项目，防止 rm -rf 误伤系统根目录或用户主目录
   if [[ -n "${DERIVED_DATA_PATH:-}" && "$DERIVED_DATA_PATH" == *"/DerivedData" && "$DERIVED_DATA_PATH" == "$ROOT_DIR/DerivedData" ]]; then
+    unregister_build_product
     log_info "正在清理构建缓存: $DERIVED_DATA_PATH"
     rm -rf "$DERIVED_DATA_PATH"
   else

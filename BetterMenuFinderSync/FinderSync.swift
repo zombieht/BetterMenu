@@ -427,7 +427,11 @@ final class FinderSync: FIFinderSync {
     }
 
     do {
-      let createdFileUrl = try FileCreator.createFile(from: definition, at: directory)
+      let createdFileUrl = try FileCreator.createFile(
+        from: definition,
+        at: directory,
+        bundle: Bundle(for: FinderSync.self)
+      )
       revealCreatedFileIfNeeded(createdFileUrl, in: directory)
     } catch {
       logger.error("Create file failed: \(error.localizedDescription, privacy: .public)")

@@ -28,7 +28,9 @@ BetterMenu/
   Services/
     AppleScriptPathArgument.swift  # AppleScript 文件路径安全编码，防止路径改变脚本语法
     ExternalAppLauncher.swift      # 终端、VS Code 等外部应用一键拉起服务
-    FileTransferService.swift      # 隔空投送调度、外置卷后台复制与重名处理
+    FileTransferService.swift      # 隔空投送与后台复制任务生命周期调度
+    FileTransferOperations.swift   # copyfile 复制、字节进度、取消、重名与失败清理
+    FileTransferProgressWindow.swift  # 文件传输进度和取消窗口
     TerminalApp.swift              # 可选终端应用定义列表
     SystemCommand.swift            # 底层命令行调用 Process 进程运行封装
     IconCacheManager.swift         # 专职后台图标渲染、预热与序列化磁盘缓存服务
@@ -42,6 +44,7 @@ BetterMenuFinderSync/
 
 BetterMenuTests/
   BetterMenuSecurityTests.swift  # 一次性请求、URL 路由、AppleScript 路径与设置迁移测试
+  BetterMenuCoreServiceTests.swift  # 文件创建、复制进度、取消与路径边界测试
 ```
 
 ### 共享配置机制
@@ -64,7 +67,7 @@ Finder 扩展不得通过 URL Scheme 直接传递动作 ID、源文件路径或�
 - **主应用入口保持轻量**：`AppDelegate` 仅处理生命周期分发、AppKit 激活策略以及 URL Scheme 路由。
 - **ViewModel 高度内聚**：`BetterMenuSettingsModel` 只做数据和 UI 绑定，底层任务（如图标预热、System 进程命令）一律剥离成独立业务服务（如 `IconCacheManager`，`SystemCommand`）。
 - **FinderSync 扩展轻量化**：`FinderSync` 类仅扮演控制器角色。偏好读取与目录监听由 `SettingsMonitor` 托管，图标解析与渲染由 `MenuIconManager` 托管，文件生成由 `FileCreator` 托管。
-- **文件发送链路**：FinderSync 只负责读取当前选择、发现已挂载可写卷并构造菜单；隔空投送与文件复制通过 URL Scheme 交给主应用的 `FileTransferService` 执行，避免大文件任务依赖扩展进程生命周期。复制目标仅允许已挂载的非内部可写卷，发生重名时生成递增后缀，任务完成后由访达定位结果。
+- **文件发送链路**：FinderSync 只负责读取当前选择、发现已挂载可写卷并构造菜单；隔空投送与文件复制通过 URL Scheme 交给主应用的 `FileTransferService` 执行，避免大文件任务依赖扩展进程生命周期。`FileTransferOperations` 使用系统 `copyfile` 回调提供字节进度和复制中取消，复制目标仅允许已挂载的非内部可写卷，发生重名时生成递增后缀，取消或失败时清理未完成项目，任务完成后由访达定位结果。
 - **Swift 6 Concurrency 并发安全**：编写异步或跨 Target 通信的工具类时，必须按照 Swift 6 安全规范进行严格类型隔离，或使用锁机制辅以 `nonisolated(unsafe)` 消除编译警告。
 - **Xcode 项目同步**：新增 Swift 源文件后，必须同步注册在 `BetterMenu.xcodeproj/project.pbxproj` 对应的 Target 编译阶段。
 - **文档维护**：更改项目行为、扩展逻辑或业务边界时，必须同步修改本指南及 `README.md`。
@@ -84,7 +87,11 @@ xcodebuild \
   test
 ```
 
-GitHub Actions 会在打包前执行同一组测试。安全通信或 AppleScript 路径处理发生变化时，必须同步补充 `BetterMenuSecurityTests`。
+`BetterMenuTests` 是无宿主单元测试 Target。共享 Scheme 在测试动作中只构建测试 Target，不构建或注册 `BetterMenu.app` 与 Finder Sync 扩展。不要重新启用主 App 或扩展的 `buildForTesting`，否则本地测试产物会出现在“登录项与扩展”中。
+
+构建主 App 或 Finder Sync 扩展时必须固定复用项目 `DerivedData` 或 Xcode 默认路径中的一种，不得混用或为同一工作区创建多个临时 DerivedData 路径。`build_and_run.sh clean` 会在清理构建产物前注销开发扩展，`package.sh` 会在打包结束后注销临时 Release 产物。
+
+GitHub Actions 会在打包前执行同一组测试，并检查测试产物中没有 `BetterMenu.app` 或 `BetterMenuFinderSync.appex`，防止 Scheme 配置回退。安全通信或 AppleScript 路径处理发生变化时，必须同步补充 `BetterMenuSecurityTests`；文件创建、复制、进度或取消逻辑发生变化时，必须同步补充 `BetterMenuCoreServiceTests`。
 
 
 ---

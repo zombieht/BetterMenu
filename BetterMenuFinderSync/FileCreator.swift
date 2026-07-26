@@ -7,6 +7,7 @@ enum FileCreator {
   struct FileCreationRequest {
     let directory: URL
     let definition: FileDefinition
+    let bundle: Bundle
     private let fileManager = FileManager.default
 
     /// 执行物理文件的创建
@@ -14,8 +15,7 @@ enum FileCreator {
     func create() throws -> URL {
       let destination = try makeAvailableDestination()
       
-      // 将 FinderSync.self 所在得 bundle 作为参数传递，以定位扩展包中的模板文件
-      try definition.contents(in: Bundle(for: FinderSync.self)).write(to: destination, options: .withoutOverwriting)
+      try definition.contents(in: bundle).write(to: destination, options: .withoutOverwriting)
       if definition.shouldBeExecutable {
         try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destination.path)
       }
@@ -48,8 +48,16 @@ enum FileCreator {
   ///   - definition: 新建文件类型的具体定义描述
   ///   - directory: 新建文件要存放的所在目录 URL
   /// - Returns: 返回创建完成后的文件路径 URL
-  static func createFile(from definition: FileDefinition, at directory: URL) throws -> URL {
-    let request = FileCreationRequest(directory: directory, definition: definition)
+  static func createFile(
+    from definition: FileDefinition,
+    at directory: URL,
+    bundle: Bundle
+  ) throws -> URL {
+    let request = FileCreationRequest(
+      directory: directory,
+      definition: definition,
+      bundle: bundle
+    )
     return try request.create()
   }
 }

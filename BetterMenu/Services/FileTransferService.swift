@@ -4,20 +4,16 @@ import os
 /// 承接 Finder 扩展发起的文件传输任务，确保大文件复制不依赖扩展进程生命周期。
 @MainActor
 final class FileTransferService {
-  private struct CopyFailure: Sendable {
-    let fileName: String
-    let message: String
-  }
-
-  private struct CopyResult: Sendable {
-    let copiedUrls: [URL]
-    let failures: [CopyFailure]
+  private struct ActiveCopyTask {
+    let task: Task<Void, Never>
+    let cancellationToken: FileTransferCancellationToken
+    let progressWindowController: FileTransferProgressWindowController
   }
 
   private let logger = Logger(
     subsystem: "com.zombie.BetterMenu", category: "FileTransferService")
   private var activeAirDropService: NSSharingService?
-  private var copyTasks: [UUID: Task<Void, Never>] = [:]
+  private var copyTasks: [UUID: ActiveCopyTask] = [:]
 
   /// 使用系统隔空投送面板发送选中的文件或文件夹。
   func sendViaAirDrop(sourceUrls: [URL]) {
@@ -47,16 +43,55 @@ final class FileTransferService {
     }
 
     let taskId = UUID()
+    let cancellationToken = FileTransferCancellationToken()
+    let progressModel = FileTransferProgressModel()
+    let progressWindowController = FileTransferProgressWindowController(model: progressModel)
+    progressModel.onCancel = { [weak self] in
+      self?.cancelCopyTask(taskId)
+    }
+    progressWindowController.show()
+
     let task = Task { [weak self] in
       let result = await Task.detached(priority: .userInitiated) {
-        Self.copyItems(existingUrls, to: destinationUrl)
+        let standardizedDestinationUrl = destinationUrl.standardizedFileURL
+        guard
+          BetterMenuShared.availableFileTransferVolumes()
+            .contains(where: { $0.url.path == standardizedDestinationUrl.path })
+        else {
+          return FileTransferCopyResult(
+            copiedUrls: [],
+            failures: [
+              FileTransferCopyFailure(
+                fileName: standardizedDestinationUrl.lastPathComponent,
+                message: "目标设备已断开、只读或不可写。"
+              )
+            ],
+            wasCancelled: false
+          )
+        }
+
+        return FileTransferOperations.copyItems(
+          existingUrls,
+          to: standardizedDestinationUrl,
+          cancellationToken: cancellationToken,
+          progressHandler: { snapshot in
+            Task { @MainActor [weak progressModel] in
+              progressModel?.update(with: snapshot)
+            }
+          }
+        )
       }.value
 
       guard let self else { return }
       self.copyTasks.removeValue(forKey: taskId)
+      progressWindowController.close()
       self.handleCopyResult(result, destinationUrl: destinationUrl)
     }
-    copyTasks[taskId] = task
+    copyTasks[taskId] = ActiveCopyTask(
+      task: task,
+      cancellationToken: cancellationToken,
+      progressWindowController: progressWindowController
+    )
   }
 
   private func existingSourceUrls(from urls: [URL]) -> [URL] {
@@ -74,12 +109,21 @@ final class FileTransferService {
     }
   }
 
-  private func handleCopyResult(_ result: CopyResult, destinationUrl: URL) {
+  private func cancelCopyTask(_ taskId: UUID) {
+    guard let activeTask = copyTasks[taskId] else { return }
+    activeTask.cancellationToken.cancel()
+    activeTask.task.cancel()
+  }
+
+  private func handleCopyResult(
+    _ result: FileTransferCopyResult,
+    destinationUrl: URL
+  ) {
     if !result.copiedUrls.isEmpty {
       NSWorkspace.shared.activateFileViewerSelecting(result.copiedUrls)
     }
 
-    guard !result.failures.isEmpty else { return }
+    guard !result.wasCancelled, !result.failures.isEmpty else { return }
 
     let maximumDisplayedFailures = 3
     var detailLines = result.failures.prefix(maximumDisplayedFailures).map {
@@ -104,93 +148,5 @@ final class FileTransferService {
     alert.alertStyle = .warning
     NSApp.activate()
     alert.runModal()
-  }
-
-  nonisolated private static func copyItems(
-    _ sourceUrls: [URL],
-    to requestedDestinationUrl: URL
-  ) -> CopyResult {
-    let fileManager = FileManager()
-    let destinationUrl = requestedDestinationUrl.standardizedFileURL
-    guard
-      BetterMenuShared.availableFileTransferVolumes(fileManager: fileManager)
-        .contains(where: { $0.url.path == destinationUrl.path })
-    else {
-      return CopyResult(
-        copiedUrls: [],
-        failures: [
-          CopyFailure(
-            fileName: destinationUrl.lastPathComponent,
-            message: "目标设备已断开、只读或不可写。"
-          )
-        ]
-      )
-    }
-
-    var copiedUrls: [URL] = []
-    var failures: [CopyFailure] = []
-    for sourceUrl in sourceUrls {
-      guard !destinationIsInsideSource(destinationUrl, sourceUrl: sourceUrl) else {
-        failures.append(
-          CopyFailure(fileName: sourceUrl.lastPathComponent, message: "不能将项目复制到其自身内部。"))
-        continue
-      }
-
-      let targetUrl = availableTargetUrl(
-        for: sourceUrl,
-        in: destinationUrl,
-        fileManager: fileManager
-      )
-      do {
-        try fileManager.copyItem(at: sourceUrl, to: targetUrl)
-        copiedUrls.append(targetUrl)
-      } catch {
-        if fileManager.fileExists(atPath: targetUrl.path) {
-          try? fileManager.removeItem(at: targetUrl)
-        }
-        failures.append(
-          CopyFailure(fileName: sourceUrl.lastPathComponent, message: error.localizedDescription))
-      }
-    }
-
-    return CopyResult(copiedUrls: copiedUrls, failures: failures)
-  }
-
-  nonisolated private static func destinationIsInsideSource(
-    _ destinationUrl: URL,
-    sourceUrl: URL
-  ) -> Bool {
-    let sourcePath = sourceUrl.standardizedFileURL.path
-    let destinationPath = destinationUrl.standardizedFileURL.path
-    return destinationPath == sourcePath || destinationPath.hasPrefix(sourcePath + "/")
-  }
-
-  nonisolated private static func availableTargetUrl(
-    for sourceUrl: URL,
-    in destinationUrl: URL,
-    fileManager: FileManager
-  ) -> URL {
-    let originalTargetUrl = destinationUrl.appendingPathComponent(sourceUrl.lastPathComponent)
-    guard fileManager.fileExists(atPath: originalTargetUrl.path) else {
-      return originalTargetUrl
-    }
-
-    let pathExtension = sourceUrl.pathExtension
-    let baseName =
-      pathExtension.isEmpty
-      ? sourceUrl.lastPathComponent
-      : sourceUrl.deletingPathExtension().lastPathComponent
-    var copyIndex = 2
-    while true {
-      let candidateName =
-        pathExtension.isEmpty
-        ? "\(baseName) \(copyIndex)"
-        : "\(baseName) \(copyIndex).\(pathExtension)"
-      let candidateUrl = destinationUrl.appendingPathComponent(candidateName)
-      if !fileManager.fileExists(atPath: candidateUrl.path) {
-        return candidateUrl
-      }
-      copyIndex += 1
-    }
   }
 }
