@@ -180,9 +180,7 @@ final class FinderSync: FIFinderSync {
       named: action.iconName, accessibilityDescription: action.title)
 
     let submenu = NSMenu(title: action.title)
-    if let airDropService = NSSharingService(named: .sendViaAirDrop),
-      airDropService.canPerform(withItems: selectedUrls)
-    {
+    if let airDropService = NSSharingService(named: .sendViaAirDrop) {
       let airDropItem = NSMenuItem(
         title: "隔空投送…",
         action: #selector(sendSelectedItemsViaAirDrop(_:)),
@@ -199,10 +197,6 @@ final class FinderSync: FIFinderSync {
     let transferVolumes = BetterMenuShared.availableFileTransferVolumes().filter {
       !selectedVolumePaths.contains($0.url.path)
     }
-    if !submenu.items.isEmpty, !transferVolumes.isEmpty {
-      submenu.addItem(.separator())
-    }
-
     for (offset, volume) in transferVolumes.enumerated() {
       let tag = Self.fileTransferVolumeTagBase + offset
       let item = NSMenuItem(

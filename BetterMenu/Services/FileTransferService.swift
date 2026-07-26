@@ -22,10 +22,7 @@ final class FileTransferService {
       showError(title: "无法发送文件", message: "选中的文件或文件夹已不存在。")
       return
     }
-    guard
-      let service = NSSharingService(named: .sendViaAirDrop),
-      service.canPerform(withItems: existingUrls)
-    else {
+    guard let service = NSSharingService(named: .sendViaAirDrop) else {
       showError(title: "隔空投送不可用", message: "请确认隔空投送已开启后再试。")
       return
     }
