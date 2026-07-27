@@ -1,7 +1,7 @@
 import Cocoa
+import Sparkle
 import SwiftUI
 import os
-import Sparkle
 
 /// 状态栏菜单的 SwiftUI 视图定义
 struct BetterMenuBarView: View {
@@ -102,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   static private(set) var shared: AppDelegate?
 
   private let logger = Logger(subsystem: "com.zombie.BetterMenu", category: "AppDelegate")
+  private let fileTransferService = FileTransferService()
   let settingsModel = BetterMenuSettingsModel()
   var window: NSWindow?
   private var initialWindowWorkItem: DispatchWorkItem?
@@ -113,8 +114,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     guard let event = NSAppleEventManager.shared().currentAppleEvent else {
       return false
     }
-    return event.eventID == kAEOpenApplication &&
-           event.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+    return event.eventID == kAEOpenApplication
+      && event.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
   }
 
   override init() {
@@ -126,7 +127,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     // 初始化 Sparkle 自动更新组件
-    updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    updaterController = SPUStandardUpdaterController(
+      startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     settingsModel.onDisplayModeDidChange = { [weak self] mode in
       self?.applyDisplayMode(mode)
@@ -233,48 +235,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let targetPolicy = mode.activationPolicy
     if NSApp.activationPolicy() != targetPolicy {
       NSApp.setActivationPolicy(targetPolicy)
-      if targetPolicy == .regular {
-        NSApp.activate(ignoringOtherApps: true)
-      }
     }
   }
 
   // MARK: - URL Scheme 请求路由派发
 
   private func handleIncomingUrl(_ url: URL) {
+    let request: BetterMenuSecureRequest
+    do {
+      let requestId = try BetterMenuSecureRequestStore.requestId(from: url)
+      request = try BetterMenuSecureRequestStore.consume(requestId: requestId)
+    } catch {
+      logger.error(
+        "Rejected BetterMenu request: \(error.localizedDescription, privacy: .public)")
+      return
+    }
+
     shouldSuppressInitialWindow = true
     cancelInitialWindowPresentation()
 
-    guard url.scheme?.lowercased() == "bettermenu" else {
-      logger.error("Ignored unsupported URL scheme: \(url.absoluteString, privacy: .public)")
-      return
-    }
-
-    guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
-
-    // URLComponents.queryItems 会自动对参数值做百分号解码。
-    // 这里不能再次调用 removingPercentEncoding，否则文件名中真实存在的 "%20"
-    // 会被误还原为空格，导致外部应用打开错误路径。
-    guard let path = components.queryItems?.first(where: { $0.name == "path" })?.value else {
-      logger.error("Missing path query parameter in URL: \(url.absoluteString, privacy: .public)")
-      return
-    }
-
-    // 统一处理 run-action 指令
-    if url.host == "run-action" {
-      guard let actionId = components.queryItems?.first(where: { $0.name == "id" })?.value else {
-        logger.error("Missing action ID in URL: \(url.absoluteString, privacy: .public)")
+    switch request.operation {
+    case .runAction:
+      guard
+        let actionId = request.actionId,
+        let path = request.sourcePaths.first,
+        settingsModel.actions.contains(where: { $0.id == actionId && $0.isEnabled })
+      else {
+        logger.error("Rejected disabled or malformed action request")
+        return
+      }
+      dispatchAction(id: actionId, path: path)
+    case .fileTransfer:
+      guard
+        settingsModel.actions.contains(where: { $0.id == "sendFile" && $0.isEnabled }),
+        let mode = request.transferMode
+      else {
+        logger.error("Rejected disabled or malformed file transfer request")
         return
       }
 
-      logger.info("Routing action '\(actionId)' for path: \(path, privacy: .public)")
-      dispatchAction(id: actionId, path: path)
-    } else if url.host == "open-terminal" {
-      // 兼容可能遗留的老版本直接调用
-      logger.info("Routing legacy open-terminal for path: \(path, privacy: .public)")
-      settingsModel.openTerminal(atPath: path)
-    } else {
-      logger.error("Unknown route host: \(url.host ?? "", privacy: .public)")
+      let sourceUrls = request.sourcePaths.map { URL(fileURLWithPath: $0) }
+      switch mode {
+      case .airDrop:
+        fileTransferService.sendViaAirDrop(sourceUrls: sourceUrls)
+      case .copy:
+        guard let destinationPath = request.destinationPath else {
+          logger.error("Missing destination in validated file transfer request")
+          return
+        }
+        fileTransferService.copy(
+          sourceUrls: sourceUrls,
+          to: URL(fileURLWithPath: destinationPath, isDirectory: true)
+        )
+      }
     }
   }
 

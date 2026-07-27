@@ -29,3 +29,4 @@ dist/
 # 本地设计源文件或临时素材，不影响应用构建。
 docs/*
 !docs/screenshots/
+CLAUDE.md

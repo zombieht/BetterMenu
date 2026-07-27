@@ -1,4 +1,5 @@
 import Cocoa
+import Darwin
 
 // MARK: - 共享常量与路径定义
 
@@ -13,6 +14,22 @@ enum BetterMenuShared {
   static let oldPathCopyEnabledKey = "pathCopyEnabled"
   static let terminalTypeKey = "terminalType"
   static let customMenuIdPrefix = "custom."
+
+  /// 菜单项与设置面板中图标的统一渲染尺寸。图标缓存按此尺寸预渲染，
+  /// 两侧取值必须一致，否则扩展读到的缓存图标会被系统再次缩放而模糊。
+  static let menuIconSize = NSSize(width: 18, height: 18)
+
+  /// 拼装自定义扩展名对应的菜单项 ID。
+  /// 该 ID 同时用于设置存储、图标缓存键与扩展侧菜单构建，必须只有一处定义。
+  static func customMenuId(for fileExtension: String) -> String {
+    "\(customMenuIdPrefix)\(fileExtension)"
+  }
+
+  /// 从菜单项 ID 还原自定义扩展名，非自定义 ID 返回 nil。
+  static func customExtension(fromMenuId id: String) -> String? {
+    guard id.hasPrefix(customMenuIdPrefix) else { return nil }
+    return String(id.dropFirst(customMenuIdPrefix.count))
+  }
 
   /// 获取用户真正的 Home 目录 URL。
   ///
@@ -49,6 +66,57 @@ enum BetterMenuShared {
   static var iconCacheUrl: URL {
     realHomeDirectoryUrl
       .appendingPathComponent("Library/Caches/BetterMenu/icon_cache.plist")
+  }
+
+  /// Finder 扩展向主应用提交一次性请求时使用的受限目录。
+  static var secureRequestDirectoryUrl: URL {
+    realHomeDirectoryUrl
+      .appendingPathComponent("Library/Application Support/BetterMenu/Requests", isDirectory: true)
+  }
+
+  /// 返回当前已挂载、可写且不位于 Mac 内部磁盘上的文件传输目标。
+  static func availableFileTransferVolumes(
+    fileManager: FileManager = .default
+  ) -> [FileTransferVolume] {
+    let resourceKeys: Set<URLResourceKey> = [
+      .volumeIsBrowsableKey,
+      .volumeIsEjectableKey,
+      .volumeIsInternalKey,
+      .volumeIsLocalKey,
+      .volumeIsReadOnlyKey,
+      .volumeIsRemovableKey,
+      .volumeLocalizedNameKey,
+    ]
+    let mountedVolumeUrls =
+      fileManager.mountedVolumeURLs(
+        includingResourceValuesForKeys: Array(resourceKeys),
+        options: [.skipHiddenVolumes]
+      ) ?? []
+
+    return mountedVolumeUrls.compactMap { volumeUrl in
+      guard let values = try? volumeUrl.resourceValues(forKeys: resourceKeys) else {
+        return nil
+      }
+      let isSupportedTarget =
+        values.volumeIsInternal == false
+        || values.volumeIsRemovable == true
+        || values.volumeIsEjectable == true
+        || values.volumeIsLocal == false
+      guard
+        values.volumeIsBrowsable != false,
+        isSupportedTarget,
+        values.volumeIsReadOnly != true,
+        fileManager.isWritableFile(atPath: volumeUrl.path)
+      else {
+        return nil
+      }
+
+      let name = values.volumeLocalizedName ?? volumeUrl.lastPathComponent
+      return FileTransferVolume(name: name, url: volumeUrl.standardizedFileURL)
+    }
+    .sorted {
+      $0.name.localizedStandardCompare($1.name) == .orderedAscending
+    }
   }
 
   // MARK: - 支持的第三方编辑器信息
@@ -244,7 +312,7 @@ enum BetterMenuShared {
       text: "#!/usr/bin/env bash\n\n",
       shouldBeExecutable: true,
       enabledByDefault: false
-    )
+    ),
   ]
 }
 
@@ -316,27 +384,55 @@ struct FinderAction: Identifiable, Codable, Hashable, Sendable {
   var isEnabled: Bool
 }
 
-/// 默认提供的快捷操作列表。
-let defaultSharedActions: [FinderAction] = [
+/// 表示“发送文件到”菜单中的一个已挂载文件系统目标。
+struct FileTransferVolume: Identifiable, Hashable, Sendable {
+  var id: URL { url }
+  let name: String
+  let url: URL
+}
+
+/// 始终保留在设置页中的内置 Finder 快捷操作。
+let requiredSharedActions: [FinderAction] = [
   FinderAction(id: "terminal", title: "在终端中打开", iconName: "terminal", isEnabled: true),
   FinderAction(id: "copyPath", title: "复制当前路径", iconName: "doc.on.doc", isEnabled: true),
-  FinderAction(
-    id: "vscode",
-    title: "在 VS Code 中打开",
-    iconName: "square.and.arrow.up",
-    isEnabled: true
-  ),
+  FinderAction(id: "sendFile", title: "发送文件到", iconName: "paperplane", isEnabled: true),
 ]
+
+/// 默认提供的快捷操作列表。
+let defaultSharedActions: [FinderAction] =
+  requiredSharedActions + [
+    FinderAction(
+      id: "vscode",
+      title: "在 VS Code 中打开",
+      iconName: "square.and.arrow.up",
+      isEnabled: true
+    )
+  ]
+
+/// 为旧版配置补齐后来新增的必备内置操作，同时保留用户原有的启用状态和排序。
+func actionsAddingMissingRequiredActions(_ actions: [FinderAction]) -> [FinderAction] {
+  var normalizedActions = actions
+
+  for requiredAction in requiredSharedActions
+  where !normalizedActions.contains(where: { $0.id == requiredAction.id }) {
+    if requiredAction.id == "sendFile",
+      let copyPathIndex = normalizedActions.firstIndex(where: { $0.id == "copyPath" })
+    {
+      normalizedActions.insert(requiredAction, at: copyPathIndex + 1)
+    } else {
+      normalizedActions.append(requiredAction)
+    }
+  }
+
+  return normalizedActions
+}
 
 // MARK: - 公共映射函数
 
 /// 根据传入的文件类型 ID 映射并提取标准的路径扩展名。
 /// "blank" 对应空字符串（无扩展名文件），其余 ID 直接作为扩展名使用。
 func cleanExtension(for id: String) -> String {
-  let cleanID =
-    id.hasPrefix(BetterMenuShared.customMenuIdPrefix)
-    ? String(id.dropFirst(BetterMenuShared.customMenuIdPrefix.count))
-    : id
+  let cleanID = BetterMenuShared.customExtension(fromMenuId: id) ?? id
   return cleanID == "blank" ? "" : cleanID
 }
 
@@ -402,7 +498,7 @@ func readSharedSettings() -> SharedSettingsPayload {
 
 extension NSImage {
   /// 将系统图标重绘到 Retina PNG，避免保存完整 TIFF 造成缓存膨胀。
-  func exportToPngData(targetSize: NSSize = NSSize(width: 18, height: 18)) -> Data? {
+  func exportToPngData(targetSize: NSSize = BetterMenuShared.menuIconSize) -> Data? {
     let scale: CGFloat = 2.0
     let pixelSize = NSSize(width: targetSize.width * scale, height: targetSize.height * scale)
 

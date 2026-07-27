@@ -1,8 +1,11 @@
 import Cocoa
 import UniformTypeIdentifiers
+import os
 
 /// 负责在后台异步预热文件类型图标及外部应用程序图标，并将渲染好的 Retina PNG 数据序列化写入磁盘缓存。
 enum IconCacheManager {
+  private static let logger = Logger(
+    subsystem: "com.zombie.BetterMenu", category: "IconCacheManager")
   /// 执行图标的异步预热与磁盘缓存写入
   /// - Parameters:
   ///   - fileTypes: 当前配置的全部内置文件类型定义
@@ -18,12 +21,12 @@ enum IconCacheManager {
       return (type.id, fileExtension)
     }
     let customItems = customExtensions.map { fileExtension in
-      (id: "custom.\(fileExtension)", fileExtension: fileExtension)
+      (id: BetterMenuShared.customMenuId(for: fileExtension), fileExtension: fileExtension)
     }
     let iconItems = builtInItems + customItems
 
-    DispatchQueue.global(qos: .utility).async {
-      let targetSize = NSSize(width: 18, height: 18)
+    Task.detached(priority: .utility) {
+      let targetSize = BetterMenuShared.menuIconSize
       var dict: [String: Data] = [:]
 
       // 1. 预热并绘制所有可能用到得新建文件类型图标
@@ -40,12 +43,13 @@ enum IconCacheManager {
 
       // 2. 预热并缓存外部操作的 App 真实图标到共享缓存中，以便 FinderSync 进程直接读取
       for action in activeActions {
-        if action.id == "terminal" || action.id == "copyPath" {
+        if requiredSharedActions.contains(where: { $0.id == action.id }) {
           continue
         }
 
         var appUrl: URL? = nil
-        if let editor = BetterMenuShared.supportedEditors.first(where: { $0.idString == action.id }) {
+        if let editor = BetterMenuShared.supportedEditors.first(where: { $0.idString == action.id })
+        {
           for bid in editor.bundleIds {
             if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
               appUrl = url
@@ -80,7 +84,8 @@ enum IconCacheManager {
         )
         try data.write(to: cacheUrl, options: .atomic)
       } catch {
-        // 缓存写入失败不影响正常功能
+        logger.error(
+          "Failed to write icon cache to disk: \(error.localizedDescription, privacy: .public)")
       }
     }
   }

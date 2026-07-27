@@ -6,15 +6,17 @@ import os
 /// 访达扩展插件主类，负责动态向 Finder 插入右键菜单
 final class FinderSync: FIFinderSync {
   private let logger = Logger(subsystem: "com.zombie.BetterMenu", category: "FinderSync")
-  
+
   // 偏好设置监控与图标管理器实例
   private let settingsMonitor = SettingsMonitor()
   private let iconManager = MenuIconManager()
-  
+
   // Tag 路由映射，每次构建菜单时更新，以保证点击回调可以找到对应数据
   private var menuDefinitionsByTag: [Int: FileDefinition] = [:]
   private var actionDefinitionsByTag: [Int: FinderAction] = [:]
+  private var fileTransferVolumesByTag: [Int: FileTransferVolume] = [:]
   private static let dynamicActionTagBase = 1000
+  private static let fileTransferVolumeTagBase = 2000
 
   // MARK: - 基础图标加载
 
@@ -22,10 +24,11 @@ final class FinderSync: FIFinderSync {
   private var menuIcon: NSImage {
     MenuIconManager.finderMenuSymbol(named: "doc.badge.plus", accessibilityDescription: "新建文件")
   }
-  
+
   /// 工具栏图标，自适应系统外观并强制单色
   private lazy var toolbarIcon: NSImage = {
-    let symbolImage = MenuIconManager.finderMenuSymbol(named: "doc.badge.plus", accessibilityDescription: "BetterMenu")
+    let symbolImage = MenuIconManager.finderMenuSymbol(
+      named: "doc.badge.plus", accessibilityDescription: "BetterMenu")
     symbolImage.isTemplate = true
     return symbolImage
   }()
@@ -73,7 +76,7 @@ final class FinderSync: FIFinderSync {
     let monitoredUrls = Self.monitoredDirectoryUrls()
     FIFinderSyncController.default().directoryURLs = Set(monitoredUrls)
     logger.info("BetterMenu Finder Sync extension loaded")
-    
+
     // 设置监控失效回调：当 settings.plist 发生改变时，自动清理图标管理器中的缓存
     settingsMonitor.onSettingsChanged = { [weak self] in
       self?.iconManager.clearCache()
@@ -110,6 +113,7 @@ final class FinderSync: FIFinderSync {
     let menu = NSMenu(title: "BetterMenu")
     menuDefinitionsByTag.removeAll()
     actionDefinitionsByTag.removeAll()
+    fileTransferVolumesByTag.removeAll()
 
     menu.addItem(makeFileCreationMenuItem(from: snapshot))
     for item in makeEnabledShortcutItems(from: snapshot) {
@@ -120,7 +124,9 @@ final class FinderSync: FIFinderSync {
   }
 
   /// 构建“新建文件”二级菜单
-  private func makeFileCreationMenuItem(from snapshot: SettingsMonitor.SettingsSnapshot) -> NSMenuItem {
+  private func makeFileCreationMenuItem(from snapshot: SettingsMonitor.SettingsSnapshot)
+    -> NSMenuItem
+  {
     let parent = NSMenuItem(title: "新建文件", action: nil, keyEquivalent: "")
     parent.image = menuIcon
 
@@ -153,14 +159,76 @@ final class FinderSync: FIFinderSync {
   }
 
   /// 构建终端、复制路径、编辑器等一级右键快捷操作
-  private func makeEnabledShortcutItems(from snapshot: SettingsMonitor.SettingsSnapshot) -> [NSMenuItem] {
+  private func makeEnabledShortcutItems(from snapshot: SettingsMonitor.SettingsSnapshot)
+    -> [NSMenuItem]
+  {
     var nextTag = Self.dynamicActionTagBase
-    return snapshot.actions.filter(\.isEnabled).map { action in
+    return snapshot.actions.filter(\.isEnabled).compactMap { action in
+      if action.id == "sendFile" {
+        return makeFileTransferMenuItem(action: action)
+      }
+
       let tag = nextTag
       nextTag += 1
       actionDefinitionsByTag[tag] = action
       return makeShortcutItem(action: action, tag: tag)
     }
+  }
+
+  /// 构建“发送文件到”二级菜单，列出隔空投送以及当前可用的外置卷和网络共享卷。
+  private func makeFileTransferMenuItem(action: FinderAction) -> NSMenuItem? {
+    let selectedUrls = selectedItemUrlsForFileTransfer()
+    guard !selectedUrls.isEmpty else { return nil }
+
+    let parent = NSMenuItem(title: action.title, action: nil, keyEquivalent: "")
+    parent.image = MenuIconManager.finderMenuSymbol(
+      named: action.iconName, accessibilityDescription: action.title)
+
+    let submenu = NSMenu(title: action.title)
+    if let airDropService = NSSharingService(named: .sendViaAirDrop) {
+      let airDropItem = NSMenuItem(
+        title: "隔空投送…",
+        action: #selector(sendSelectedItemsViaAirDrop(_:)),
+        keyEquivalent: ""
+      )
+      airDropItem.target = self
+      let airDropIcon = airDropService.image
+      airDropIcon.size = BetterMenuShared.menuIconSize
+      airDropItem.image = airDropIcon
+      submenu.addItem(airDropItem)
+    }
+
+    let selectedVolumePaths = sourceVolumePaths(for: selectedUrls)
+    let transferVolumes = BetterMenuShared.availableFileTransferVolumes().filter {
+      !selectedVolumePaths.contains($0.url.path)
+    }
+    for (offset, volume) in transferVolumes.enumerated() {
+      let tag = Self.fileTransferVolumeTagBase + offset
+      let item = NSMenuItem(
+        title: volume.name,
+        action: #selector(copySelectedItemsToVolume(_:)),
+        keyEquivalent: ""
+      )
+      item.target = self
+      item.tag = tag
+
+      let volumeIcon = NSWorkspace.shared.icon(forFile: volume.url.path)
+      volumeIcon.size = BetterMenuShared.menuIconSize
+      item.image = volumeIcon
+
+      fileTransferVolumesByTag[tag] = volume
+      submenu.addItem(item)
+    }
+
+    if submenu.items.isEmpty {
+      let placeholder = NSMenuItem(
+        title: "未找到可用设备或磁盘", action: nil, keyEquivalent: "")
+      placeholder.isEnabled = false
+      submenu.addItem(placeholder)
+    }
+
+    parent.submenu = submenu
+    return parent
   }
 
   private func makeShortcutItem(action: FinderAction, tag: Int) -> NSMenuItem {
@@ -170,7 +238,8 @@ final class FinderSync: FIFinderSync {
     item.tag = tag
     item.image =
       iconManager.getCachedIcon(for: action.id)
-      ?? MenuIconManager.finderMenuSymbol(named: action.iconName, accessibilityDescription: action.title)
+      ?? MenuIconManager.finderMenuSymbol(
+        named: action.iconName, accessibilityDescription: action.title)
     return item
   }
 
@@ -207,11 +276,15 @@ final class FinderSync: FIFinderSync {
   }
 
   /// 获取当前已启用的文件类型列表并进行排序
-  private func enabledDefinitions(with snapshot: SettingsMonitor.SettingsSnapshot) -> [FileDefinition] {
-    let builtIns = BetterMenuShared.supportedFileTypes.filter { snapshot.enabledFileTypes.contains($0.id) }
+  private func enabledDefinitions(with snapshot: SettingsMonitor.SettingsSnapshot)
+    -> [FileDefinition]
+  {
+    let builtIns = BetterMenuShared.supportedFileTypes.filter {
+      snapshot.enabledFileTypes.contains($0.id)
+    }
     let customDefinitions = snapshot.customExtensions.map { fileExtension in
       FileDefinition(
-        id: "custom.\(fileExtension)",
+        id: BetterMenuShared.customMenuId(for: fileExtension),
         title: "新建 \(fileExtension.uppercased()) 文件",
         menuTitle: "新建 \(fileExtension.uppercased()) 文件",
         baseName: "新建 \(fileExtension.uppercased()) 文件",
@@ -283,27 +356,67 @@ final class FinderSync: FIFinderSync {
       return
     }
 
-    var components = URLComponents()
-    components.scheme = "BetterMenu"
-    components.host = "run-action"
-    components.queryItems = [
-      URLQueryItem(name: "id", value: action.id),
-      URLQueryItem(name: "path", value: resolvedUrl.path),
-    ]
+    let request = BetterMenuSecureRequest.runAction(
+      actionId: action.id,
+      path: resolvedUrl.standardizedFileURL.path
+    )
+    openMainApplication(with: request, activates: true)
+  }
 
-    guard let requestUrl = components.url else {
-      showError(message: "无法生成请求指令。")
+  @objc private func sendSelectedItemsViaAirDrop(_ sender: NSMenuItem) {
+    openFileTransferRequest(mode: .airDrop, destination: nil)
+  }
+
+  @objc private func copySelectedItemsToVolume(_ sender: NSMenuItem) {
+    guard let volume = fileTransferVolumesByTag[sender.tag] else {
+      showError(message: "所选设备已不可用，请重新打开右键菜单后再试。")
+      return
+    }
+    openFileTransferRequest(mode: .copy, destination: volume.url)
+  }
+
+  /// 将文件传输任务交给主应用执行，避免长时间复制受 Finder 扩展生命周期影响。
+  private func openFileTransferRequest(
+    mode: BetterMenuFileTransferMode,
+    destination: URL?
+  ) {
+    let selectedUrls = selectedItemUrlsForFileTransfer()
+    guard !selectedUrls.isEmpty else {
+      showError(message: "没有可发送的文件或文件夹。")
+      return
+    }
+
+    let request = BetterMenuSecureRequest.fileTransfer(
+      sourcePaths: selectedUrls.map { $0.standardizedFileURL.path },
+      mode: mode,
+      destinationPath: destination?.standardizedFileURL.path
+    )
+    openMainApplication(with: request, activates: mode == .airDrop)
+  }
+
+  /// 写入一次性请求后，仅通过不透明 UUID 唤起主应用。
+  private func openMainApplication(
+    with request: BetterMenuSecureRequest,
+    activates: Bool
+  ) {
+    let requestUrl: URL
+    do {
+      try BetterMenuSecureRequestStore.submit(request)
+      requestUrl = try BetterMenuSecureRequestStore.launchUrl(for: request.id)
+    } catch {
+      BetterMenuSecureRequestStore.discard(requestId: request.id)
+      showError(message: "无法安全地提交请求：\(error.localizedDescription)")
       return
     }
 
     let configuration = NSWorkspace.OpenConfiguration()
-    configuration.activates = true
+    configuration.activates = activates
     configuration.promptsUserIfNeeded = true
 
     NSWorkspace.shared.open(requestUrl, configuration: configuration) { [weak self] _, error in
-      if let error = error {
+      if let error {
+        BetterMenuSecureRequestStore.discard(requestId: request.id)
         self?.showError(message: "唤起 BetterMenu 失败：\(error.localizedDescription)")
-        return
       }
     }
   }
@@ -318,7 +431,11 @@ final class FinderSync: FIFinderSync {
     }
 
     do {
-      let createdFileUrl = try FileCreator.createFile(from: definition, at: directory)
+      let createdFileUrl = try FileCreator.createFile(
+        from: definition,
+        at: directory,
+        bundle: Bundle(for: FinderSync.self)
+      )
       revealCreatedFileIfNeeded(createdFileUrl, in: directory)
     } catch {
       logger.error("Create file failed: \(error.localizedDescription, privacy: .public)")
@@ -345,6 +462,23 @@ final class FinderSync: FIFinderSync {
     case .openSelection:
       return selectedUrl ?? targetedUrl ?? desktopUrl
     }
+  }
+
+  private func selectedItemUrlsForFileTransfer() -> [URL] {
+    let fileManager = FileManager.default
+    return FIFinderSyncController.default().selectedItemURLs()?.filter {
+      fileManager.fileExists(atPath: $0.path)
+    } ?? []
+  }
+
+  private func sourceVolumePaths(for urls: [URL]) -> Set<String> {
+    Set(
+      urls.compactMap { url in
+        let values = try? url.resourceValues(forKeys: [.volumeURLKey])
+        let volumeUrl = values?.allValues[.volumeURLKey] as? URL
+        return volumeUrl?.standardizedFileURL.path
+      }
+    )
   }
 
   private func revealCreatedFileIfNeeded(_ fileUrl: URL, in directory: URL) {
@@ -374,7 +508,8 @@ final class FinderSync: FIFinderSync {
 
     UNUserNotificationCenter.current().add(request) { [weak self] error in
       if let error = error {
-        self?.logger.error("Failed to post notification: \(error.localizedDescription, privacy: .public)")
+        self?.logger.error(
+          "Failed to post notification: \(error.localizedDescription, privacy: .public)")
       }
     }
   }

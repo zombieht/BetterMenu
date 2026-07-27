@@ -31,7 +31,54 @@ jobs:
         run: |
           xcodebuild -version
 
-      # 步骤 2.5：安装 create-dmg 以启用精美 DMG 打包布局
+      # 步骤 2.4：校验代码风格。swift-format 随 Xcode 提供，无需额外安装依赖。
+      # --strict 让任何风格告警都以非零退出码结束，把当前统一的排版固化为门禁。
+      - name: Lint Formatting
+        run: |
+          xcrun swift-format lint \
+            --configuration .swift-format \
+            --recursive \
+            --strict \
+            BetterMenu BetterMenuFinderSync BetterMenuTests
+
+      # 步骤 2.5：运行安全通信、路径处理与设置迁移单元测试
+      - name: Run Tests
+        run: |
+          TEST_DERIVED_DATA="$RUNNER_TEMP/BetterMenuTestsDerivedData"
+          echo "TEST_DERIVED_DATA=$TEST_DERIVED_DATA" >> "$GITHUB_ENV"
+          xcodebuild \
+            -project BetterMenu.xcodeproj \
+            -scheme BetterMenu \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$TEST_DERIVED_DATA" \
+            -resultBundlePath "$RUNNER_TEMP/BetterMenuTests.xcresult" \
+            test
+
+          UNEXPECTED_PRODUCTS="$(
+            find "$TEST_DERIVED_DATA/Build/Products" \
+              -type d \
+              \( -name 'BetterMenu.app' -o -name 'BetterMenuFinderSync.appex' \) \
+              -print
+          )"
+          if [[ -n "$UNEXPECTED_PRODUCTS" ]]; then
+            echo "单元测试不应构建或注册 BetterMenu App/Finder Sync 扩展："
+            echo "$UNEXPECTED_PRODUCTS"
+            exit 1
+          fi
+
+      # 步骤 2.55：无论测试通过与否都上传 xcresult 包，失败时可直接下载查看具体失败用例，
+      # 不必再依赖日志尾部输出定位问题。
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: BetterMenu-TestResults
+          path: ${{ runner.temp }}/BetterMenuTests.xcresult
+          if-no-files-found: warn
+          retention-days: 14
+
+      # 步骤 2.6：安装 create-dmg 以启用精美 DMG 打包布局
       - name: Install create-dmg
         run: |
           brew install create-dmg
@@ -41,6 +88,17 @@ jobs:
         run: |
           chmod +x script/package.sh
           ./script/package.sh > build.log 2>&1 || { echo "=== BUILD FAILED ==="; tail -n 200 build.log; exit 1; }
+
+      # 步骤 3.5：上传完整打包日志。tail -n 200 只能看到尾部，
+      # 编译错误常出现在中段，因此把整份日志留作工件。
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: BetterMenu-BuildLog
+          path: build.log
+          if-no-files-found: warn
+          retention-days: 14
 
       # 步骤 4：当推送以 'v' 开头的 tag 时，下载 Sparkle 工具生成 appcast.xml 并对其签名
       - name: Generate Sparkle Appcast

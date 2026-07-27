@@ -74,19 +74,21 @@ struct ExternalAppLauncher {
       return
     }
 
+    let pathLiteral = AppleScriptPathArgument.sourceLiteral(for: path)
     let scriptText = """
       tell application "iTerm"
+          set targetPath to \(pathLiteral)
           activate
           if (count of windows) is 0 then
               set newWindow to (create window with default profile)
               tell current session of newWindow
-                  write text "cd " & quoted form of "\(path)"
+                  write text "cd " & quoted form of targetPath
               end tell
           else
               tell current window
                   create tab with default profile
                   tell current session
-                      write text "cd " & quoted form of "\(path)"
+                      write text "cd " & quoted form of targetPath
                   end tell
               end tell
           end if
@@ -135,14 +137,16 @@ struct ExternalAppLauncher {
 
   /// Terminal 已运行时，通过 AppleScript 在前台窗口新建 tab 并 cd 到目标路径。
   private func runTerminalNewTabScript(path: String) -> Bool {
+    let pathLiteral = AppleScriptPathArgument.sourceLiteral(for: path)
     let scriptText = """
       tell application "Terminal"
+          set targetPath to \(pathLiteral)
           if (count of windows) > 0 then
               tell front window
-                  set newTab to do script "cd " & quoted form of "\(path)"
+                  set newTab to do script "cd " & quoted form of targetPath
               end tell
           else
-              do script "cd " & quoted form of "\(path)"
+              do script "cd " & quoted form of targetPath
           end if
           activate
       end tell
@@ -190,7 +194,7 @@ struct ExternalAppLauncher {
 
     // 完成回调在后台队列 (com.apple.launchservices.open-queue) 执行，
     // 不能直接访问 @MainActor 隔离成员，需用 @Sendable 标记并手动派发回主线程。
-    nonisolated(unsafe) let log = logger
+    let log = self.logger
     NSWorkspace.shared.open([directoryUrl], withApplicationAt: appUrl, configuration: configuration)
     { @Sendable runningApplication, error in
       if let error = error {

@@ -165,7 +165,7 @@ struct QuickAccessSettingsCard: View {
   }
 
   private func canRemove(_ action: FinderAction) -> Bool {
-    action.id != "terminal" && action.id != "copyPath"
+    !requiredSharedActions.contains(where: { $0.id == action.id })
   }
 
   /// 弹出原生打开面板让用户手动选择可添加到 Finder 右键菜单的应用程序。
@@ -192,7 +192,7 @@ struct ActionIconView: View {
   let isInstalled: Bool
 
   var body: some View {
-    if action.id == "terminal" || action.id == "copyPath" {
+    if requiredSharedActions.contains(where: { $0.id == action.id }) {
       Image(systemName: action.iconName)
         .font(.system(size: 15, weight: .regular))
         .symbolRenderingMode(.monochrome)
@@ -318,6 +318,8 @@ struct FinderActionSettingsRow: View {
       return "在当前 Finder 目录启动终端。"
     case "copyPath":
       return "复制当前目录或选中项目路径。"
+    case "sendFile":
+      return "发送到隔空投送、移动硬盘、U 盘或网络共享卷。"
     default:
       return editorDescription ?? "在当前 Finder 目录中打开。"
     }

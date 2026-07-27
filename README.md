@@ -38,6 +38,10 @@
   - 支持主流代码编辑器一键拉起：**VS Code**、**Cursor**、**OpenAI Codex**、**Xcode**、**Sublime Text**、**IntelliJ IDEA**、**WebStorm**、**PyCharm**、**Android Studio**、**CotEditor**。
 - 📋 **一键复制路径**：
   - 快速复制当前访达目录或选中文件的绝对路径。
+- 📤 **发送文件到其他设备**：
+  - 右键选中的文件或文件夹，可通过隔空投送发送到附近的 Mac、iPhone 或 iPad。
+  - 支持直接复制到已挂载且可写的移动硬盘、U 盘和网络共享卷，并支持一次发送多个项目。
+  - 复制时显示文件数量、字节进度并支持随时取消；目标位置存在同名项目时自动生成不冲突的文件名，完成后在访达中定位结果。
 - ⚙️ **SwiftUI 设置面板与状态栏菜单**：
   - 现代化、清爽的设置界面，支持调整右键菜单项的启用状态与排序，即时同步生效。
   - 支持通过系统状态栏菜单快速调起面板、重启 Finder 访达、或退出软件。
@@ -99,10 +103,34 @@ xattr -cr /Applications/BetterMenu.app
 ./script/build_and_run.sh run
 ```
 
+该脚本默认使用增量编译，日常改动只重新编译受影响的文件。需要全量重建时追加 `--clean`，需要一并清空运行缓存时追加 `--clean-cache`；`./script/build_and_run.sh clean` 会同时清理两者。
+
+清理 App 运行缓存后启动：
+```bash
+./script/build_and_run.sh --clean-cache run
+```
+
+同时清理 DerivedData 构建缓存和 App 运行缓存后启动：
+```bash
+./script/build_and_run.sh --clean --clean-cache run
+```
+
+只清理两类缓存、不启动 App：
+```bash
+./script/build_and_run.sh clean
+```
+
 ### 仅构建并注册扩展
 如果只需重新注册 Finder Sync 扩展，可执行：
 ```bash
 ./script/build_and_run.sh register
+```
+
+### 代码风格
+提交前统一代码排版（规则见 `.swift-format`，`swift-format` 随 Xcode 提供）：
+```bash
+./script/build_and_run.sh format   # 就地格式化
+./script/build_and_run.sh lint     # 仅检查，CI 使用同一规则
 ```
 
 ### Release 打包
@@ -110,6 +138,8 @@ xattr -cr /Applications/BetterMenu.app
 ```bash
 ./script/package.sh
 ```
+
+单元测试使用无宿主测试 Target，不会构建或注册 Finder Sync 扩展。开发脚本会在重新构建或清理当前项目的固定 DerivedData 前注销其中的开发扩展，`package.sh` 会在打包完成时注销对应的临时 Release 产物；脚本不会处理其他 DerivedData 或临时目录中的 BetterMenu 注册。
 
 ---
 
@@ -121,6 +151,12 @@ xattr -cr /Applications/BetterMenu.app
 ---
 
 ## 📝 更新日志
+
+### v2.0.8 (2026-07-26)
+- **传输体验**：复制文件到移动硬盘、U 盘或网络共享卷时显示实时字节进度、项目数量和当前文件，并支持复制过程中取消任务。
+- **复制可靠性**：取消或失败后自动清理未完成的目标文件，同时保留已经成功复制的项目。
+- **测试完善**：新增文件创建与传输核心服务测试，覆盖内容写入、可执行权限、重名处理、目录复制、进度回调、取消和路径边界。
+- **开发环境**：单元测试不再构建 Finder Sync 扩展，开发清理与 Release 打包会自动注销临时扩展，避免系统设置积累重复条目。
 
 ### v2.0.7 (2026-06-09)
 - **结构重构**：整理并优化项目的文件组织结构，将源文件分类整理至 Models、Services 和 Views 目录中，提升代码可读性与可维护性。

@@ -64,6 +64,29 @@ let betterMenuFileTypes: [FileDefinition] = BetterMenuShared.supportedFileTypes
 
 // MARK: - ViewModel
 
+/// 线程安全的通知监听器容器包装，用于规避 Swift 6 deinit 非隔离上下文下的并发警告
+final class NotificationObserversBox: @unchecked Sendable {
+  private let lock = NSLock()
+  private var observers: [NSObjectProtocol] = []
+
+  func append(_ observer: NSObjectProtocol) {
+    lock.lock()
+    defer { lock.unlock() }
+    observers.append(observer)
+  }
+
+  func cleanUp() {
+    lock.lock()
+    let current = observers
+    observers.removeAll()
+    lock.unlock()
+
+    for observer in current {
+      NotificationCenter.default.removeObserver(observer)
+    }
+  }
+}
+
 /// 应用的设置与业务逻辑 ViewModel，负责数据读写、服务状态监控与进程通信
 @MainActor
 final class BetterMenuSettingsModel: ObservableObject {
@@ -179,7 +202,7 @@ final class BetterMenuSettingsModel: ObservableObject {
 
   let appVersion: String
   var onDisplayModeDidChange: ((BetterMenuDisplayMode) -> Void)?
-  nonisolated(unsafe) private var notificationObservers: [NSObjectProtocol] = []
+  private let notificationObservers = NotificationObserversBox()
   private var isSynchronizingLaunchAtLogin = false
   private var writeDebounceWorkItem: DispatchWorkItem?
 
@@ -220,7 +243,7 @@ final class BetterMenuSettingsModel: ObservableObject {
       ) ?? .menuBarOnly
 
     if let storedActions = sharedSettings.actions {
-      self.actions = storedActions
+      self.actions = actionsAddingMissingRequiredActions(storedActions)
     } else {
       // 兼容以前的硬编码布尔值
       var acts = defaultSharedActions
@@ -238,7 +261,7 @@ final class BetterMenuSettingsModel: ObservableObject {
         acts[idx].isEnabled = oldPathEnabled
       }
       // vscode 默认启用
-      self.actions = acts
+      self.actions = actionsAddingMissingRequiredActions(acts)
     }
 
     let storedTerminalType =
@@ -254,7 +277,8 @@ final class BetterMenuSettingsModel: ObservableObject {
         forKey: Self.enabledFileTypesKey) ?? defaultTypes)
     customExtensions = storedCustomExtensions
 
-    let finalDefaultOrder = defaultTypes + storedCustomExtensions.map { Self.customMenuId(for: $0) }
+    let finalDefaultOrder =
+      defaultTypes + storedCustomExtensions.map { BetterMenuShared.customMenuId(for: $0) }
     menuOrder = Self.normalizedMenuOrder(
       sharedSettings.menuOrder ?? UserDefaults.standard.stringArray(forKey: Self.menuOrderKey)
         ?? finalDefaultOrder,
@@ -270,9 +294,7 @@ final class BetterMenuSettingsModel: ObservableObject {
   }
 
   deinit {
-    for observer in notificationObservers {
-      NotificationCenter.default.removeObserver(observer)
-    }
+    notificationObservers.cleanUp()
   }
 
   // MARK: - 终端支持列表
@@ -290,7 +312,9 @@ final class BetterMenuSettingsModel: ObservableObject {
 
   var menuPreviewItems: [MenuPreviewItem] {
     menuOrder.compactMap { id in
-      guard enabledFileTypes.contains(id) || id.hasPrefix(Self.customMenuIdPrefix) else {
+      guard
+        enabledFileTypes.contains(id) || id.hasPrefix(BetterMenuShared.customMenuIdPrefix)
+      else {
         return nil
       }
       return menuItem(for: id)
@@ -448,7 +472,7 @@ final class BetterMenuSettingsModel: ObservableObject {
 
   /// 检查某一个 action 是否在系统中已安装
   func isActionInstalled(_ actionId: String) -> Bool {
-    if actionId == "terminal" || actionId == "copyPath" {
+    if requiredSharedActions.contains(where: { $0.id == actionId }) {
       return true
     }
     if let editor = BetterMenuShared.supportedEditors.first(where: { $0.idString == actionId }) {
@@ -728,7 +752,8 @@ final class BetterMenuSettingsModel: ObservableObject {
       // 异步预热图标缓存
       prewarmIconCache()
     } catch {
-      NSLog("BetterMenu shared settings write failed: \(error.localizedDescription)")
+      logger.error(
+        "BetterMenu shared settings write failed: \(error.localizedDescription, privacy: .public)")
     }
   }
 
@@ -741,19 +766,13 @@ final class BetterMenuSettingsModel: ObservableObject {
     )
   }
 
-  private static let customMenuIdPrefix = "custom."
-
   private static var defaultMenuOrder: [String] {
     betterMenuFileTypes.map(\.id)
   }
 
-  private static func customMenuId(for fileExtension: String) -> String {
-    "\(customMenuIdPrefix)\(fileExtension)"
-  }
-
   private static func normalizedMenuOrder(_ order: [String], customExtensions: [String]) -> [String]
   {
-    let allIDs = defaultMenuOrder + customExtensions.map(customMenuId(for:))
+    let allIDs = defaultMenuOrder + customExtensions.map(BetterMenuShared.customMenuId(for:))
     let allowedIDs = Set(allIDs)
     let orderedKnownIDs = uniqueMenuIds(from: order.filter { allowedIDs.contains($0) })
     let missingIDs = allIDs.filter { !orderedKnownIDs.contains($0) }
@@ -782,8 +801,7 @@ final class BetterMenuSettingsModel: ObservableObject {
       return MenuPreviewItem(id: id, title: builtIn.menuTitle)
     }
 
-    guard id.hasPrefix(Self.customMenuIdPrefix) else { return nil }
-    let fileExtension = String(id.dropFirst(Self.customMenuIdPrefix.count))
+    guard let fileExtension = BetterMenuShared.customExtension(fromMenuId: id) else { return nil }
     guard customExtensions.contains(fileExtension) else { return nil }
     return MenuPreviewItem(id: id, title: "新建 \(fileExtension.uppercased()) 文件")
   }
@@ -823,5 +841,3 @@ final class BetterMenuSettingsModel: ObservableObject {
     return migrated
   }
 }
-
-
