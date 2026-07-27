@@ -193,6 +193,51 @@ final class BetterMenuCoreServiceTests: XCTestCase {
     )
   }
 
+  func testConcurrentFileTransfersReserveUniqueTargetNames() throws {
+    let rootUrl = try makeTemporaryDirectory()
+    let sourceUrl = rootUrl.appendingPathComponent("Concurrent.txt")
+    let destinationUrl = rootUrl.appendingPathComponent("Destination", isDirectory: true)
+    try FileManager.default.createDirectory(at: destinationUrl, withIntermediateDirectories: true)
+    let expectedContents = Data(repeating: 0x43, count: 1_024 * 1_024)
+    try expectedContents.write(to: sourceUrl)
+
+    let completionGroup = DispatchGroup()
+    let startGate = ConcurrentCopyStartGate(participantCount: 2)
+    let results = LockedCopyResults()
+
+    for _ in 0..<2 {
+      completionGroup.enter()
+      let firstAttemptGate = FirstCopyAttemptGate(startGate: startGate)
+      DispatchQueue.global(qos: .userInteractive).async {
+        let result = FileTransferOperations.copyItems(
+          [sourceUrl],
+          to: destinationUrl,
+          copyAttemptWillStart: { _ in
+            firstAttemptGate.waitIfNeeded()
+          }
+        )
+        results.append(result)
+        completionGroup.leave()
+      }
+    }
+
+    XCTAssertEqual(completionGroup.wait(timeout: .now() + 10), .success)
+    XCTAssertFalse(startGate.didTimeOut)
+
+    let completedResults = results.values
+    XCTAssertEqual(completedResults.count, 2)
+    XCTAssertTrue(completedResults.allSatisfy { !$0.wasCancelled && $0.failures.isEmpty })
+
+    let copiedUrls = completedResults.flatMap(\.copiedUrls)
+    XCTAssertEqual(
+      Set(copiedUrls.map(\.lastPathComponent)),
+      ["Concurrent.txt", "Concurrent 2.txt"]
+    )
+    for copiedUrl in copiedUrls {
+      XCTAssertEqual(try Data(contentsOf: copiedUrl), expectedContents)
+    }
+  }
+
   func testFileTransferCanBeCancelledBeforeCopying() throws {
     let rootUrl = try makeTemporaryDirectory()
     let sourceUrl = rootUrl.appendingPathComponent("Source.txt")
@@ -375,6 +420,83 @@ private final class LockedSnapshots: @unchecked Sendable {
     lock.lock()
     snapshots.append(snapshot)
     lock.unlock()
+  }
+}
+
+private final class LockedCopyResults: @unchecked Sendable {
+  private let lock = NSLock()
+  private var results: [FileTransferCopyResult] = []
+
+  var values: [FileTransferCopyResult] {
+    lock.lock()
+    defer { lock.unlock() }
+    return results
+  }
+
+  func append(_ result: FileTransferCopyResult) {
+    lock.lock()
+    results.append(result)
+    lock.unlock()
+  }
+}
+
+private final class FirstCopyAttemptGate: @unchecked Sendable {
+  private let startGate: ConcurrentCopyStartGate
+  private let lock = NSLock()
+  private var isFirstAttempt = true
+
+  init(startGate: ConcurrentCopyStartGate) {
+    self.startGate = startGate
+  }
+
+  func waitIfNeeded() {
+    lock.lock()
+    let shouldWait = isFirstAttempt
+    isFirstAttempt = false
+    lock.unlock()
+
+    guard shouldWait else { return }
+    startGate.arriveAndWait()
+  }
+}
+
+private final class ConcurrentCopyStartGate: @unchecked Sendable {
+  private let participantCount: Int
+  private let lock = NSLock()
+  private var arrivedCount = 0
+  private var timedOut = false
+
+  init(participantCount: Int) {
+    self.participantCount = participantCount
+  }
+
+  var didTimeOut: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return timedOut
+  }
+
+  func arriveAndWait() {
+    lock.lock()
+    arrivedCount += 1
+    lock.unlock()
+
+    let deadline = DispatchTime.now() + 5
+    while true {
+      lock.lock()
+      let canStart = arrivedCount == participantCount
+      lock.unlock()
+      if canStart {
+        return
+      }
+      if DispatchTime.now() >= deadline {
+        lock.lock()
+        timedOut = true
+        lock.unlock()
+        return
+      }
+      Thread.sleep(forTimeInterval: 0.001)
+    }
   }
 }
 

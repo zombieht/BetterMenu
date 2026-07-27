@@ -40,6 +40,35 @@ final class FileTransferCancellationToken: @unchecked Sendable {
 enum FileTransferOperations {
   typealias ProgressHandler = @Sendable (FileTransferProgressSnapshot) -> Void
 
+  private final class TargetReservationRegistry: @unchecked Sendable {
+    private let lock = NSLock()
+    private var reservedPaths: Set<String> = []
+
+    func reserveTargetUrl(
+      for sourceUrl: URL,
+      in destinationUrl: URL,
+      fileManager: FileManager
+    ) -> URL {
+      lock.lock()
+      defer { lock.unlock() }
+
+      let targetUrl = availableTargetUrl(
+        for: sourceUrl,
+        in: destinationUrl,
+        fileManager: fileManager,
+        excluding: reservedPaths
+      )
+      reservedPaths.insert(targetUrl.path)
+      return targetUrl
+    }
+
+    func release(_ targetUrl: URL) {
+      lock.lock()
+      reservedPaths.remove(targetUrl.path)
+      lock.unlock()
+    }
+  }
+
   private final class CopyProgressContext: @unchecked Sendable {
     let baseCompletedBytes: Int64
     let currentFileName: String
@@ -123,11 +152,14 @@ enum FileTransferOperations {
     }
   }
 
+  private static let targetReservationRegistry = TargetReservationRegistry()
+
   static func copyItems(
     _ sourceUrls: [URL],
     to requestedDestinationUrl: URL,
     cancellationToken: FileTransferCancellationToken = FileTransferCancellationToken(),
-    progressHandler: @escaping ProgressHandler = { _ in }
+    progressHandler: @escaping ProgressHandler = { _ in },
+    copyAttemptWillStart: @escaping @Sendable (URL) -> Void = { _ in }
   ) -> FileTransferCopyResult {
     let fileManager = FileManager()
     let destinationUrl = requestedDestinationUrl.standardizedFileURL
@@ -194,11 +226,6 @@ enum FileTransferOperations {
         continue
       }
 
-      let targetUrl = availableTargetUrl(
-        for: sourceUrl,
-        in: destinationUrl,
-        fileManager: fileManager
-      )
       let snapshot = FileTransferProgressSnapshot(
         currentFileName: sourceUrl.lastPathComponent,
         completedBytes: completedBytes,
@@ -218,11 +245,30 @@ enum FileTransferOperations {
         progressHandler: progressHandler
       )
 
-      let copyErrorNumber = copyItem(
-        at: sourceUrl,
-        to: targetUrl,
-        context: context
-      )
+      var targetUrl: URL
+      var copyErrorNumber: Int32
+      repeat {
+        guard !cancellationToken.isCancelled else {
+          return FileTransferCopyResult(
+            copiedUrls: copiedUrls,
+            failures: failures,
+            wasCancelled: true
+          )
+        }
+        targetUrl = targetReservationRegistry.reserveTargetUrl(
+          for: sourceUrl,
+          in: destinationUrl,
+          fileManager: fileManager
+        )
+        copyAttemptWillStart(targetUrl)
+        copyErrorNumber = copyItem(
+          at: sourceUrl,
+          to: targetUrl,
+          context: context
+        )
+        targetReservationRegistry.release(targetUrl)
+      } while copyErrorNumber == EEXIST
+
       if copyErrorNumber == 0 {
         copiedUrls.append(targetUrl)
         finishItem(at: index, fileName: sourceUrl.lastPathComponent)
@@ -261,10 +307,14 @@ enum FileTransferOperations {
   static func availableTargetUrl(
     for sourceUrl: URL,
     in destinationUrl: URL,
-    fileManager: FileManager
+    fileManager: FileManager,
+    excluding reservedPaths: Set<String> = []
   ) -> URL {
     let originalTargetUrl = destinationUrl.appendingPathComponent(sourceUrl.lastPathComponent)
-    guard fileManager.fileExists(atPath: originalTargetUrl.path) else {
+    guard
+      fileManager.fileExists(atPath: originalTargetUrl.path)
+        || reservedPaths.contains(originalTargetUrl.path)
+    else {
       return originalTargetUrl
     }
 
@@ -280,7 +330,9 @@ enum FileTransferOperations {
         ? "\(baseName) \(copyIndex)"
         : "\(baseName) \(copyIndex).\(pathExtension)"
       let candidateUrl = destinationUrl.appendingPathComponent(candidateName)
-      if !fileManager.fileExists(atPath: candidateUrl.path) {
+      if !fileManager.fileExists(atPath: candidateUrl.path)
+        && !reservedPaths.contains(candidateUrl.path)
+      {
         return candidateUrl
       }
       copyIndex += 1

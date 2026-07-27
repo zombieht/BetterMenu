@@ -235,9 +235,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let targetPolicy = mode.activationPolicy
     if NSApp.activationPolicy() != targetPolicy {
       NSApp.setActivationPolicy(targetPolicy)
-      if targetPolicy == .regular {
-        NSApp.activate(ignoringOtherApps: true)
-      }
     }
   }
 

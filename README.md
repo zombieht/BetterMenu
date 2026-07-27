@@ -139,7 +139,7 @@ xattr -cr /Applications/BetterMenu.app
 ./script/package.sh
 ```
 
-单元测试使用无宿主测试 Target，不会构建或注册 Finder Sync 扩展。开发脚本会在重新构建前注销其他 DerivedData 或临时目录中的 BetterMenu 开发构建，并在清理或打包完成时注销对应构建产物，避免“登录项与扩展”积累重复的开发扩展；该过程不会删除其他构建目录中的文件。
+单元测试使用无宿主测试 Target，不会构建或注册 Finder Sync 扩展。开发脚本会在重新构建或清理当前项目的固定 DerivedData 前注销其中的开发扩展，`package.sh` 会在打包完成时注销对应的临时 Release 产物；脚本不会处理其他 DerivedData 或临时目录中的 BetterMenu 注册。
 
 ---
 
