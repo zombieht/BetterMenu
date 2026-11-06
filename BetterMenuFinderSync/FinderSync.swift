@@ -54,6 +54,11 @@ final class FinderSync: FIFinderSync {
         .appendingPathComponent("Mobile Documents", isDirectory: true),
     ]
     urls.append(contentsOf: iCloudCandidateUrls)
+    // 挂载卷具有独立的文件系统边界，需要逐个登记，不能仅监视 /Volumes 父目录。
+    let volumeUrls =
+      fileManager.mountedVolumeURLs(
+        includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) ?? []
+    urls.append(contentsOf: volumeUrls.filter { $0.path != "/" })
 
     var seenPaths: Set<String> = []
     return urls.filter { url in
@@ -73,14 +78,30 @@ final class FinderSync: FIFinderSync {
 
   override init() {
     super.init()
-    let monitoredUrls = Self.monitoredDirectoryUrls()
-    FIFinderSyncController.default().directoryURLs = Set(monitoredUrls)
+    let notificationCenter = NSWorkspace.shared.notificationCenter
+    for name in [
+      NSWorkspace.didMountNotification,
+      NSWorkspace.didUnmountNotification,
+      NSWorkspace.didRenameVolumeNotification,
+    ] {
+      notificationCenter.addObserver(
+        self, selector: #selector(refreshMonitoredDirectories(_:)), name: name, object: nil)
+    }
+    refreshMonitoredDirectories(nil)
     logger.info("BetterMenu Finder Sync extension loaded")
 
     // 设置监控失效回调：当 settings.plist 发生改变时，自动清理图标管理器中的缓存
     settingsMonitor.onSettingsChanged = { [weak self] in
       self?.iconManager.clearCache()
     }
+  }
+
+  deinit {
+    NSWorkspace.shared.notificationCenter.removeObserver(self)
+  }
+
+  @objc private func refreshMonitoredDirectories(_ notification: Notification?) {
+    FIFinderSyncController.default().directoryURLs = Set(Self.monitoredDirectoryUrls())
   }
 
   override var toolbarItemName: String {

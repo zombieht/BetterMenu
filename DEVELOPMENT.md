@@ -58,6 +58,10 @@ BetterMenuTests/
 
 共享数据模型 `FileDefinition`、`FinderAction` 和键名统一在 `BetterMenuShared.swift` 中管理。新增需要两个 Target 同时读取的数据定义时，必须直接归入共享层，禁止在调用方重复定义常量或硬编码字面量。自定义菜单 ID 只能通过 `BetterMenuShared.customMenuId(for:)` 与 `customExtension(fromMenuId:)` 构造与解析，菜单图标尺寸统一取 `BetterMenuShared.menuIconSize`（图标缓存按此尺寸预渲染，两侧取值不一致会导致缓存图标被系统再次缩放而模糊）。
 
+### Finder 扩展监视目录
+
+Finder Sync 的监视目录包括用户主目录、iCloud 目录、`/Volumes` 和各个已挂载的可见非系统根卷。卷根目录必须单独登记到 `directoryURLs`，不能仅依赖 `/Volumes` 父目录跨文件系统覆盖。扩展订阅 `NSWorkspace` 的挂载、卸载和卷重命名通知，发生变化后重新计算监视集合，使启动前已连接和运行中插入的移动硬盘、U 盘及网络共享卷均能显示右键菜单。
+
 ### Finder 扩展安全请求机制
 
 Finder 扩展不得通过 URL Scheme 直接传递动作 ID、源文件路径或目标路径。扩展会先将请求写入权限为 `0600` 的一次性 plist 文件，再使用仅包含随机 UUID 的 `bettermenu://request?id=...` 链接唤起主应用。
